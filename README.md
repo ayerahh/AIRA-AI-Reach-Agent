@@ -1,36 +1,184 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AIRA — AI Reach Agent
 
-## Getting Started
+> AI-native mini CRM built for the **Xeno Engineering Take-Home Assignment**.
+> Turn a plain-English campaign goal into a targeted, launched, and measured campaign in under 30 seconds.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Browser (Next.js App Router)              │
+│                                                                   │
+│   ┌───────────────────────────────────────────────────────────┐  │
+│   │                    app/page.tsx (Client)                   │  │
+│   │                                                            │  │
+│   │  [1] Goal Input → "Re-engage lapsed customers…"           │  │
+│   │         │                                                  │  │
+│   │  [2] Agent Thinking Panel (animated step-by-step UI)      │  │
+│   │         │                                                  │  │
+│   │  [3] Review: Audience + Message Variants + Channel        │  │
+│   │         │                                                  │  │
+│   │  [4] Approve → Launch → Analytics Results                 │  │
+│   └───────────────────┬───────────────────────────────────────┘  │
+└───────────────────────┼─────────────────────────────────────────┘
+                        │  HTTP (fetch)
+          ┌─────────────▼──────────────┐
+          │     Next.js Route Handlers  │
+          │                            │
+          │  POST /api/agent/run       │  ← Batch 2
+          │  POST /api/campaigns/launch│  ← Batch 2
+          │  GET  /api/campaigns       │  ← Batch 2
+          │  GET  /api/customers       │  ← Batch 2
+          └──────┬──────────┬──────────┘
+                 │          │
+   ┌─────────────▼───┐  ┌───▼──────────────────────┐
+   │   Agent Service  │  │   Channel Service         │
+   │  lib/agent.ts    │  │   lib/channel-service.ts  │
+   │                  │  │                           │
+   │ • Parse goal     │  │ • Route by channel        │
+   │ • Score segments │  │ • Simulate delivery       │
+   │ • Draft messages │  │ • Return comm records     │
+   │ • Pick channel   │  └───────────┬───────────────┘
+   └──────┬───────────┘              │
+          │                          │
+   ┌──────▼──────────────────────────▼──────────────┐
+   │                  lib/store.ts                   │
+   │           (In-Memory Singleton Store)            │
+   │                                                  │
+   │   customers[]   orders[]   campaigns[]           │
+   │   communications[]                               │
+   └──────────────────────────────────────────────────┘
+          │
+   ┌──────▼──────────────┐
+   │    lib/seed.ts       │
+   │  25 customers        │
+   │  ~100 orders         │
+   │  (Velour brand data) │
+   └──────────────────────┘
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Core Flow (5 Steps)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+Goal Input
+    │
+    ▼
+POST /api/agent/run
+    │
+    ├── Parse goal (fake LLM → real LLM swap point)
+    ├── Analyse customers in store
+    ├── Build AudienceSegment (RFM + tag filters)
+    ├── Draft 3 MessageVariants
+    ├── Select optimal CampaignChannel
+    └── Return Campaign { status: "pending_approval" }
+    │
+    ▼
+UI Review (Audience / Variants / Channel)
+    │
+    ▼
+POST /api/campaigns/launch
+    │
+    ├── Update campaign status → "launching"
+    ├── Call Channel Service per customer
+    │       └── Simulate: queued → sent → delivered → opened/clicked
+    ├── Create Communication records in store
+    ├── Compute CampaignAnalytics
+    └── Return { campaign, analytics }
+    │
+    ▼
+Analytics Results Panel
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Folder Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+aira/
+├── app/
+│   ├── layout.tsx              # Root layout + fonts
+│   ├── globals.css             # Tailwind + custom animations
+│   ├── page.tsx                # Main page (Goal → Agent → Launch → Analytics)
+│   └── api/
+│       ├── agent/
+│       │   └── run/route.ts    # POST: run agent reasoning
+│       ├── campaigns/
+│       │   ├── route.ts        # GET: list campaigns
+│       │   └── launch/route.ts # POST: launch + channel dispatch
+│       └── customers/
+│           └── route.ts        # GET: customer list (debug/future)
+│
+├── lib/
+│   ├── types.ts                # All TypeScript domain types
+│   ├── seed.ts                 # 25 customers + 100 orders
+│   ├── store.ts                # In-memory singleton store
+│   ├── agent.ts                # Agent reasoning engine (fake → LLM)
+│   ├── channel-service.ts      # Channel dispatch simulation
+│   ├── analytics.ts            # Analytics computation
+│   └── utils.ts                # cn(), formatINR(), makeId(), etc.
+│
+├── package.json
+├── tailwind.config.ts
+├── tsconfig.json
+└── README.md
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Swapping Fake AI → Real LLM
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`lib/agent.ts` exports a single async function `runAgent(goalText, customers, orders)`.
+To plug in a real LLM:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```typescript
+// Current (fake):
+const reasoning = buildFakeReasoning(goalText, segment);
+
+// Replace with:
+const reasoning = await callClaudeAPI(goalText, customerSummary);
+// or
+const reasoning = await callOpenAI(goalText, customerSummary);
+```
+
+The function signature and return type stay identical — the rest of the app is unaffected.
+
+---
+
+## Running Locally
+
+```bash
+npm install
+npm run dev
+# → http://localhost:3000
+```
+
+---
+
+## Tech Stack
+
+| Layer | Choice | Why |
+|-------|--------|-----|
+| Framework | Next.js 15 (App Router) | File-based routing, server actions, edge-ready |
+| Language | TypeScript | End-to-end type safety |
+| Styling | Tailwind CSS | Utility-first, demo-speed |
+| Icons | lucide-react | Consistent, tree-shakeable |
+| Dates | date-fns | Lightweight date manipulation |
+| State | React useState + server route handlers | No Redux overhead for demo scope |
+| Storage | In-memory (Node.js module singleton) | Zero setup, swap-ready for Supabase/Prisma |
+
+---
+
+## Design Decisions
+
+- **Route handlers over Server Actions** — consistent pattern, easier to test with `curl`, clear separation of concerns.
+- **Channel Service as a separate `lib/` module** — simulates microservice boundary. In production this would be a separate service called over HTTP.
+- **Fake reasoning first** — `lib/agent.ts` uses deterministic logic so the demo never fails. The LLM integration point is a single function call.
+- **In-memory store** — `lib/store.ts` is a Node.js singleton that survives hot-reload in dev. Swapping to a DB is a one-file change.
+
+---
+
+*Built for Xeno · 2.5-day sprint · AIRA v0.1*

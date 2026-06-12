@@ -5,12 +5,12 @@
  * Main application page.
  *
  * Flow:
- *  1. User types a natural-language campaign goal
- *  2. Client POSTs to /api/agent/run (→ server fakes AI reasoning)
- *  3. Agent thinking panel animates through steps in real-time (SSE-ready,
- *     currently polls via optimistic UI with local step progression)
- *  4. Results appear: audience segment, message variants, chosen channel
- *  5. User approves → POST /api/campaigns/launch → analytics surface
+ * 1. User types a natural-language campaign goal
+ * 2. Client POSTs to /api/agent/run (→ server fakes AI reasoning)
+ * 3. Agent thinking panel animates through steps in real-time (SSE-ready,
+ * currently polls via optimistic UI with local step progression)
+ * 4. Results appear: audience segment, message variants, chosen channel
+ * 5. User approves → POST /api/campaigns/launch → analytics surface
  */
 
 import { useState, useRef, useCallback } from "react";
@@ -33,6 +33,7 @@ import {
   Phone,
   Mail,
   Bell,
+  Terminal as TerminalIcon,
 } from "lucide-react";
 import { cn, formatINR, formatPct } from "@/lib/utils";
 import type {
@@ -42,11 +43,12 @@ import type {
   CampaignChannel,
   CampaignAnalytics,
 } from "@/lib/types";
+import CallbackTerminal from "@/components/CallbackTerminal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type AppPhase =
-  | "idle"           // waiting for goal input
+  | "idle"          // waiting for goal input
   | "thinking"       // agent running
   | "review"         // agent done, awaiting approval
   | "launching"      // campaign being launched
@@ -920,10 +922,10 @@ export default function HomePage() {
           </>
         )}
 
-        {/* ── Analytics Results ────────────────────────────────────────────── */}
+        {/* ── Analytics & Live Telemetry Results ───────────────────────────── */}
         {isResults && analytics && (
-          <section className="animate-slide-up">
-            <div className="flex items-center gap-2 mb-4">
+          <section className="space-y-6 animate-slide-up">
+            <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-success/20 flex items-center justify-center">
                 <BarChart3 size={13} className="text-success" />
               </div>
@@ -931,10 +933,23 @@ export default function HomePage() {
                 Campaign Results
               </h2>
               <span className="ml-2 text-xs bg-success/10 border border-success/20 text-success px-2.5 py-0.5 rounded-full">
-                Live
+                Active
               </span>
             </div>
 
+            {/* Asynchronous Live Network Callback Monitor */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary uppercase tracking-wider pl-1">
+                <TerminalIcon size={12} className="text-amber-500" />
+                Live Network Telemetry Stream
+              </div>
+              <CallbackTerminal
+                isCampaignActive={isResults}
+                matchedCustomerIds={campaign?.audience?.matchedCustomerIds || []}
+              />
+            </div>
+
+            {/* Structured Analytics Metric Panes */}
             <AnalyticsPanel analytics={analytics} />
 
             <button
@@ -948,15 +963,24 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="fixed bottom-0 inset-x-0 border-t border-border bg-canvas/80 backdrop-blur-sm">
+      {/* ── Fixed Status Instrumentation Footer ───────────────────────────── */}
+      <footer className="fixed bottom-0 inset-x-0 border-t border-border bg-canvas/80 backdrop-blur-sm z-50">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <span className="text-xs text-text-muted">
             AIRA · Xeno Engineering Take-Home · In-memory demo
           </span>
           <div className="flex items-center gap-4 text-xs text-text-muted">
+            {/* Live AI Cluster Pipeline Status Indicator Badge */}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-800/60 bg-emerald-950/40 px-2.5 py-0.5 text-xs font-medium text-emerald-400 shadow-sm">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              Groq Llama 3.3 Connected
+            </span>
+            <span className="text-border">|</span>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
               25 customers · 100 orders loaded
             </span>
           </div>

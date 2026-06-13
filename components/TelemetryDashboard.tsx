@@ -99,10 +99,14 @@ export default function TelemetryDashboard({
       )}>
         <div className="space-y-5 flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center gap-2 border-b border-slate-900 pb-3 select-none">
-            <Terminal size={16} className="text-indigo-400" />
-            <h3 className="text-xs font-bold font-mono text-slate-300 uppercase tracking-wider">AIRA Observability Stack</h3>
-          </div>
+          <div 
+          className="flex items-center gap-2 border-b border-slate-900 pb-3 select-none cursor-pointer hover:bg-slate-900/30 transition-all rounded-lg px-2 -mx-2 group"
+          onClick={() => setIsOpen(false)}
+        >
+          <Terminal size={16} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+          <h3 className="text-xs font-bold font-mono text-slate-300 uppercase tracking-wider flex-1">AIRA Observability Stack</h3>
+          <span className="text-[9px] text-slate-600 font-mono opacity-60 group-hover:opacity-100 transition-opacity">← click to close</span>
+        </div>
 
           {/* Tab Selection Row */}
           <div className="flex gap-2 bg-slate-900/40 p-1 rounded-xl border border-slate-800/40 select-none">

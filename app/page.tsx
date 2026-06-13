@@ -1057,13 +1057,6 @@ export default function HomePage() {
         <div className={`absolute top-[35%] -right-[10%] w-[35vw] h-[35vw] rounded-full bg-gradient-to-br ${blobs.blob2} filter blur-[90px] animate-orb-two transition-all duration-1000`} />
       </div>
 
-      {/* Sharp Premium Radial Pointer Light Overlay */}
-      <div 
-        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(280px circle at var(--mouse-x) var(--mouse-y), rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0.06) 45%, transparent 100%)`
-        }}
-      />
 
       {/* Sharp Premium Radial Pointer Light Overlay */}
       <div 
@@ -1096,7 +1089,6 @@ export default function HomePage() {
           
           <p className="text-xs font-mono text-slate-500 tracking-wide max-w-md mx-auto">
             Built for Xeno · Take-home Engineering Assignment <br />
-            <span className="text-[10px] text-purple-400/70 border border-purple-900/40 bg-purple-950/20 px-1.5 py-0.5 rounded mt-2 inline-block">Demo Sandbox Mode Active</span>
           </p>
         </div>
 
@@ -1205,44 +1197,312 @@ export default function HomePage() {
         </div>
       </header>
 
-  {/* ── Bloomreach-Style Modern Premium Split Landing Page ── */}
-  <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center min-h-[95vh] py-12 border-b border-slate-900/60">
-  
-        {/* Left Hand Typography Side */}
-        <div className="lg:col-span-7 space-y-5 text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono">
-            ✨ AI-Native Campaign Engine · Xeno Take-Home
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-none">
-            One Prompt, <br />
-            <span className="text-indigo-400">Full Campaign.</span>
-          </h1>
-          <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
-            Describe your target business goals in natural language. AIRA immediately parses parameters, models customer segments, structures message copies, and configures real-time telemetry pipelines automatically.
-          </p>
-          <div className="pt-1">
-            {userName && (
-              <span className="text-xs text-slate-500 font-mono">
-                Active Operator: <span className="text-indigo-400 font-medium">{userName}</span>
-              </span>
-            )}
-          </div>
-        </div>
+  {/* ============================================================
+      ONE PROMPT, FULL CAMPAIGN CORE HEADER + VIDEO LAYER
+      ============================================================ */}
+  <div className="w-full my-12 animate-fade-in">
+    <div className="text-center mb-6">
+      <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full mb-4">
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+        <span className="text-[10px] font-mono tracking-wider text-purple-400 uppercase">AI-Native Campaign Engine · Xeno Take-Home</span>
+      </div>
+      <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight">
+        One Prompt, <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Full Campaign</span>
+      </h1>
+      <p className="text-sm md:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+        Describe your target business goals in natural language. AIRA immediately parses parameters, 
+        models customer segments, structures message copies, and configures real-time telemetry pipelines automatically.
+      </p>
+    </div>
+    
+    {/* ============================================================
+        PREMIUM CHASSIS LIVE ANIMATION DECK (Direct Core Track)
+        ============================================================ */}
+    <div className="rounded-xl overflow-hidden border border-purple-500/30 bg-black shadow-2xl max-w-4xl mx-auto mt-8 transition-all duration-300 hover:border-purple-500/50">
+      <video 
+        src="/s.mp4"
+        className="w-full aspect-video object-cover block" 
+        autoPlay={true}
+        loop={true}
+        muted={true}
+        playsInline={true}
+        controls={false}
+        preload="auto"
+      >
+        <p className="text-center p-8 font-mono text-xs text-slate-500">
+          // BROWSER RENDER ERROR: Asset file path cannot be resolved.
+        </p>
+      </video>
+    </div>
+    
+    <p className="text-center font-mono text-[10px] text-slate-500 mt-3 uppercase tracking-wider">
+      // SYSTEM STREAM LIVE TELEMETRY LOOP
+    </p>
+    
+    <p className="text-center font-mono text-[10px] text-slate-500 mt-3">
+      // SYSTEM WALKTHROUGH • 2 MIN RUNTIME
+    </p>
+  </div>
 
-        {/* Right Hand Video Showcase Viewport */}
-        <div className="lg:col-span-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-2 shadow-2xl overflow-hidden group">
-          <div className="aspect-video w-full rounded-xl bg-slate-950 overflow-hidden relative border border-slate-900">
-            <video 
-              autoPlay loop muted playsInline
-              className="w-full h-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-[1.02]"
-              src="/assets/aira-walkthrough-preview.mp4" 
-            />
-            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 border border-white/5 text-[10px] font-mono text-slate-500">
-              AIRA_WALKTHROUGH_DEMO.MP4
-            </div>
-          </div>
+
+{/* ——— VIEWPORT 3: Goal Input Section ——— */}
+{(isIdle || isThinking) && (
+  <section className="mb-8 animate-slide-up delay-100">
+    
+    {/* MAIN SECTION LABEL */}
+    <div className="text-center mb-6">
+      <div className="inline-flex items-center gap-2 bg-purple-500/20 border border-purple-500/40 px-4 py-1.5 rounded-full mb-3">
+        <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+        <span className="text-[11px] font-mono tracking-wider text-purple-300 uppercase font-bold">Main Engine</span>
+      </div>
+      <h2 className="text-2xl md:text-3xl font-bold text-white">
+        Campaign <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Goal</span>
+      </h2>
+      <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+        Type your objective — AIRA handles the rest
+      </p>
+    </div>
+    
+    {/* Main Input Text Box - BIGGER & MORE PROMINENT */}
+    <div className={cn(
+      "relative rounded-2xl border-2 transition-all duration-300 bg-slate-950/60 p-6",
+      isThinking
+        ? "border-purple-500/60 shadow-[0_0_40px_rgba(168,85,247,0.25)]"
+        : "border-purple-500/30 hover:border-purple-500/60 hover:shadow-[0_0_30px_rgba(99,102,241,0.1)]"
+    )}>
+      
+      <div className="flex items-center gap-2 text-xs font-mono text-purple-400 font-bold uppercase tracking-widest mb-3">
+        <span className="text-base">🧠</span> 
+        <span>TRY AIRA - ENTER YOUR CAMPAIGN GOAL  </span>
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse ml-1" />
+      </div>
+
+      <textarea
+        ref={textareaRef}
+        value={goalText}
+        onChange={(e) => handleTextareaChange(e.target.value)}
+        placeholder="Example: 'Re-engage customers who haven't purchased in 90 days with a 20% off personalized win-back offer'"
+        className="w-full min-h-[160px] bg-slate-900/60 border-2 border-slate-700 rounded-xl p-5 text-base font-mono text-white placeholder-slate-500 outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/20 resize-none transition-all relative z-10"
+        onKeyDown={(e) => {
+          if (showDropdown && dropdownMatches.length > 0) {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setSelectedIndex((i) => (i < dropdownMatches.length - 1 ? i + 1 : 0));
+              return;
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setSelectedIndex((i) => (i > 0 ? i - 1 : dropdownMatches.length - 1));
+              return;
+            }
+            if (e.key === "Escape") {
+              setShowDropdown(false);
+              return;
+            }
+            if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+              e.preventDefault();
+              const selected = dropdownMatches[selectedIndex];
+              if (selected) {
+                setGoalText(selected.text);
+                setShowDropdown(false);
+                setTimeout(() => runAgent(selected.text), 100);
+              }
+              return;
+            }
+          }
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            runAgent();
+          }
+        }}
+      />
+
+      {/* Footer Row Inside Textarea Area */}
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-800">
+        <div className="flex gap-2 flex-wrap">
+          {isIdle &&
+            EXAMPLE_GOALS.slice(0, 2).map((eg, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleTextareaChange(eg)}
+                className="text-xs text-slate-400 hover:text-purple-300 border border-slate-700 hover:border-purple-500 rounded-full px-3 py-1.5 transition-all"
+              >
+                {eg.slice(0, 38)}…
+              </button>
+            ))}
         </div>
-        </section>
+        <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">⌘</kbd>
+          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">↵</kbd>
+          <span className="ml-1">to run</span>
+        </span>
+      </div>
+
+    </div>
+
+    {/* Error Banner */}
+    {error && (
+      <div className="mt-4 flex items-center gap-2 text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded-xl px-4 py-3 animate-fade-in">
+        <AlertCircle size={16} />
+        {error}
+      </div>
+    )}
+
+    {/* Run Button - BIGGER & GLOWING */}
+    <div className="mt-6">
+      <ShimmerButton
+        onClick={() => runAgent()}
+        disabled={!goalText.trim() || isThinking}
+        background={goalText.trim() && !isThinking ? "rgba(139, 92, 246, 0.9)" : "rgba(30, 41, 59, 0.6)"}
+        shimmerColor={goalText.trim() && !isThinking ? "#ffffff" : "rgba(255, 255, 255, 0.05)"}
+        borderRadius="14px"
+        className={cn(
+          "w-full font-bold text-lg transition-all duration-200",
+          "flex items-center justify-center gap-3 h-16 border border-white/15",
+          goalText.trim() && !isThinking
+            ? "text-white glow-accent hover:scale-[1.02] active:scale-[0.98]"
+            : "text-slate-400 cursor-not-allowed"
+        )}
+      >
+        {isThinking ? (
+          <>
+            <span className="inline-flex gap-1.5 mr-2">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="thinking-dot w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
+              ))}
+            </span>
+            <span className="text-base">AIRA is thinking...</span>
+          </>
+        ) : (
+          <>
+            <Zap size={22} className="text-purple-300" />
+            <span className="text-base">Run AIRA Agent</span>
+            <ArrowRight size={18} className="text-purple-300" />
+          </>
+        )}
+      </ShimmerButton>
+    </div>
+
+    {/* Autocomplete Suggestions */}
+    {showDropdown && dropdownMatches.length > 0 && !isThinking && (
+      <div className="w-full mt-4 bg-slate-950 border border-purple-500/30 rounded-xl shadow-2xl max-h-64 overflow-y-auto custom-scrollbar divide-y divide-purple-900/30 animate-fade-in">
+        <div className="bg-purple-950/30 px-4 py-2.5 text-xs text-purple-300 font-mono font-bold uppercase tracking-wider flex items-center gap-2">
+          <Sparkles size={12} />
+          {dropdownMatches.length} matching parameters found • Use ↑ ↓ Enter
+        </div>
+        {dropdownMatches.map((suggestion, idx) => (
+          <button
+            key={`${suggestion.label}-${idx}`}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setGoalText(suggestion.text);
+              setShowDropdown(false);
+              setTimeout(() => runAgent(suggestion.text), 100);
+            }}
+            className={cn(
+              "w-full text-left px-4 py-3 hover:bg-purple-500/10 transition-all border-b border-purple-500/5 block font-mono",
+              idx === selectedIndex && "bg-purple-500/10 border-l-2 border-l-purple-500 pl-3.5"
+            )}
+          >
+            <div className="font-bold text-sm text-white mb-0.5 tracking-tight">
+              ✦ {suggestion.label}
+            </div>
+            <div className="text-[11px] text-slate-400 truncate max-w-2xl">
+              {suggestion.text}
+            </div>
+          </button>
+        ))}
+      </div>
+    )}
+
+  </section>
+)}
+
+        {/* ── Agent Thinking Panel ─────────────────────────────────────────── */}
+        {(isThinking || isReview || isLaunching || isResults) && (
+          <section className="mb-8">
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-surface-2">
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-xl flex items-center justify-center",
+                    isThinking
+                      ? "bg-accent/20 animate-pulse"
+                      : "bg-success/20"
+                  )}
+                >
+                  {isThinking ? (
+                    <Brain size={16} className="text-accent-bright" />
+                  ) : (
+                    <CheckCircle2 size={16} className="text-success" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">
+                    {isThinking ? "Agent Reasoning" : "Analysis Complete"}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {isThinking
+                      ? `Step ${Math.min(currentStepIndex + 1, THINKING_STEPS.length)} of ${THINKING_STEPS.length}`
+                      : `${THINKING_STEPS.length} steps completed · ${
+                          campaign?.agentReasoning.processingTimeMs
+                            ? `${(campaign.agentReasoning.processingTimeMs / 1000).toFixed(1)}s`
+                            : "done"
+                        }`}
+                  </p>
+                </div>
+
+                {/* Confidence badge — shown once done */}
+                {campaign && !isThinking && (
+                  <div className="ml-auto flex items-center gap-1.5 bg-success/10 border border-success/20 text-success text-xs font-medium px-3 py-1.5 rounded-full">
+                    <TrendingUp size={11} />
+                    {Math.round(campaign.agentReasoning.confidence * 100)}% confidence
+                  </div>
+                )}
+              </div>
+
+              {/* Steps list */}
+              <div className="p-3 space-y-1">
+                {THINKING_STEPS.map((step, i) => (
+                  <StepIndicator
+                    key={step.id}
+                    step={step}
+                    index={i}
+                    currentIndex={
+                      isThinking ? currentStepIndex : THINKING_STEPS.length
+                    }
+                  />
+                ))}
+              </div>
+
+              {/* Reasoning summary — shown once thinking is done */}
+              {campaign && !isThinking && (
+                <div className="mx-3 mb-3 p-4 bg-surface-2 rounded-xl border border-border animate-fade-in">
+                  <p className="text-xs text-text-muted uppercase tracking-wider mb-2">
+                    Agent Summary
+                  </p>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    {campaign.agentReasoning.goalSummary}
+                  </p>
+                  {campaign.agentReasoning.riskFlags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {campaign.agentReasoning.riskFlags.map((flag, i) => (
+                        <span
+                          key={i}
+                          className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-full px-2.5 py-0.5"
+                        >
+                          ⚠ {flag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
 {/* ── VIEWPORT 2: Live Horizontal Pipeline Diagram Architecture ── */}
 <section className="min-h-[90vh] flex flex-col justify-center py-12 border-b border-slate-900/60 snap-start text-left">
@@ -1408,244 +1668,6 @@ export default function HomePage() {
 {/* Deep immersion space transition padding to clear fold layers before goal panel */}
 <div className="h-[20vh] w-full" />
 
-{/* ——— VIEWPORT 3: Goal Input Section ——— */}
-{(isIdle || isThinking) && (
-        <section className="mb-8 pb-32 animate-slide-up delay-100">
-          
-          {/* Main Input Text Box Wrapper Container */}
-          <div className={cn(
-            "relative rounded-2xl border transition-all duration-300 bg-slate-950/40 p-5",
-            isThinking
-              ? "border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.15)]"
-              : "border-slate-800/80 hover:border-purple-500/30 hover:shadow-[0_0_30px_rgba(99,102,241,0.05)]"
-          )}>
-            
-            <div className="flex items-center gap-2 text-xs font-mono text-purple-400 font-bold uppercase tracking-widest mb-3">
-              <span>🧠</span> Campaign Goal
-            </div>
-
-            <textarea
-              ref={textareaRef}
-              value={goalText}
-              onChange={(e) => handleTextareaChange(e.target.value)}
-              placeholder="Describe your campaign target parameters..."
-              className="w-full min-h-[120px] bg-slate-900/40 border border-slate-800 rounded-xl p-4 text-sm font-mono text-white placeholder-slate-600 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 resize-none transition-all relative z-10"
-              onKeyDown={(e) => {
-                if (showDropdown && dropdownMatches.length > 0) {
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setSelectedIndex((i) => (i < dropdownMatches.length - 1 ? i + 1 : 0));
-                    return;
-                  }
-                  if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setSelectedIndex((i) => (i > 0 ? i - 1 : dropdownMatches.length - 1));
-                    return;
-                  }
-                  if (e.key === "Escape") {
-                    setShowDropdown(false);
-                    return;
-                  }
-                  if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
-                    e.preventDefault();
-                    const selected = dropdownMatches[selectedIndex];
-                    if (selected) {
-                      setGoalText(selected.text);
-                      setShowDropdown(false);
-                      setTimeout(() => runAgent(selected.text), 100);
-                    }
-                    return;
-                  }
-                }
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                  runAgent();
-                }
-              }}
-            />
-
-            {/* Footer Row Inside Textarea Area */}
-            <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-900">
-              <div className="flex gap-2 flex-wrap">
-                {isIdle &&
-                  EXAMPLE_GOALS.slice(0, 2).map((eg, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleTextareaChange(eg)}
-                      className="text-xs text-slate-500 hover:text-slate-300 border border-slate-800/80 hover:border-slate-700 rounded-full px-2.5 py-1 transition-colors"
-                    >
-                      {eg.slice(0, 38)}…
-                    </button>
-                  ))}
-              </div>
-              <span className="text-xs text-slate-500 font-mono">
-                ⌘↵ to run
-              </span>
-            </div>
-
-          </div> {/* STABLE CLOSING OF THE INPUT DIV CHASSIS */}
-
-          {/* Error Banner System Node */}
-          {error && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-red-400 bg-red-950/20 border border-red-900/40 rounded-xl px-4 py-3 animate-fade-in">
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
-
-          {/* Action Row - Primary Shimmer Execution Button Mounted Directly Under Box Context */}
-          <div className="mt-4">
-            <ShimmerButton
-              onClick={() => runAgent()}
-              disabled={!goalText.trim() || isThinking}
-              background={goalText.trim() && !isThinking ? "rgba(79, 70, 229, 0.9)" : "rgba(15, 23, 42, 0.6)"}
-              shimmerColor={goalText.trim() && !isThinking ? "#ffffff" : "rgba(255, 255, 255, 0.05)"}
-              borderRadius="12px"
-              className={cn(
-                "w-full font-semibold text-base transition-all duration-200",
-                "flex items-center justify-center gap-2 h-14 border border-white/10",
-                goalText.trim() && !isThinking
-                  ? "text-white glow-accent hover:scale-[1.01] active:scale-[0.99]"
-                  : "text-text-muted cursor-not-allowed"
-              )}
-            >
-              {isThinking ? (
-                <>
-                  <span className="inline-flex gap-1 mr-2">
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className="thinking-dot w-2 h-2 rounded-full bg-accent-bright animate-pulse" />
-                    ))}
-                  </span>
-                  AIRA is thinking…
-                </>
-              ) : (
-                <>
-                  <Zap size={18} />
-                  Run AIRA Agent
-                </>
-              )}
-            </ShimmerButton>
-          </div>
-
-          {/* Autocomplete Suggestions Matrix - Safely Rendering Below the Shimmer Button Context */}
-          {showDropdown && dropdownMatches.length > 0 && !isThinking && (
-            <div className="w-full mt-3 bg-slate-950 border border-slate-900 rounded-xl shadow-2xl max-h-56 overflow-y-auto custom-scrollbar divide-y divide-slate-900/60 animate-fade-in">
-              <div className="bg-slate-900/40 px-4 py-2.5 text-xs text-purple-400 font-mono font-bold uppercase tracking-wider">
-                {dropdownMatches.length} matching parameters found • Use ↑ ↓ Enter
-              </div>
-              {dropdownMatches.map((suggestion, idx) => (
-                <button
-                  key={`${suggestion.label}-${idx}`}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setGoalText(suggestion.text);
-                    setShowDropdown(false);
-                    setTimeout(() => runAgent(suggestion.text), 100);
-                  }}
-                  className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-purple-500/10 transition-all border-b border-purple-500/5 block font-mono",
-                    idx === selectedIndex && "bg-purple-500/10 border-l-2 border-l-purple-500 pl-3.5"
-                  )}
-                >
-                  <div className="font-bold text-sm text-slate-200 mb-0.5 tracking-tight">
-                    ▪ {suggestion.label}
-                  </div>
-                  <div className="text-[11px] text-slate-500 truncate max-w-2xl">
-                    {suggestion.text}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-        </section>
-      )}
-
-        {/* ── Agent Thinking Panel ─────────────────────────────────────────── */}
-        {(isThinking || isReview || isLaunching || isResults) && (
-          <section className="mb-8">
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              {/* Panel header */}
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-surface-2">
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-xl flex items-center justify-center",
-                    isThinking
-                      ? "bg-accent/20 animate-pulse"
-                      : "bg-success/20"
-                  )}
-                >
-                  {isThinking ? (
-                    <Brain size={16} className="text-accent-bright" />
-                  ) : (
-                    <CheckCircle2 size={16} className="text-success" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-text-primary">
-                    {isThinking ? "Agent Reasoning" : "Analysis Complete"}
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    {isThinking
-                      ? `Step ${Math.min(currentStepIndex + 1, THINKING_STEPS.length)} of ${THINKING_STEPS.length}`
-                      : `${THINKING_STEPS.length} steps completed · ${
-                          campaign?.agentReasoning.processingTimeMs
-                            ? `${(campaign.agentReasoning.processingTimeMs / 1000).toFixed(1)}s`
-                            : "done"
-                        }`}
-                  </p>
-                </div>
-
-                {/* Confidence badge — shown once done */}
-                {campaign && !isThinking && (
-                  <div className="ml-auto flex items-center gap-1.5 bg-success/10 border border-success/20 text-success text-xs font-medium px-3 py-1.5 rounded-full">
-                    <TrendingUp size={11} />
-                    {Math.round(campaign.agentReasoning.confidence * 100)}% confidence
-                  </div>
-                )}
-              </div>
-
-              {/* Steps list */}
-              <div className="p-3 space-y-1">
-                {THINKING_STEPS.map((step, i) => (
-                  <StepIndicator
-                    key={step.id}
-                    step={step}
-                    index={i}
-                    currentIndex={
-                      isThinking ? currentStepIndex : THINKING_STEPS.length
-                    }
-                  />
-                ))}
-              </div>
-
-              {/* Reasoning summary — shown once thinking is done */}
-              {campaign && !isThinking && (
-                <div className="mx-3 mb-3 p-4 bg-surface-2 rounded-xl border border-border animate-fade-in">
-                  <p className="text-xs text-text-muted uppercase tracking-wider mb-2">
-                    Agent Summary
-                  </p>
-                  <p className="text-sm text-text-secondary leading-relaxed">
-                    {campaign.agentReasoning.goalSummary}
-                  </p>
-                  {campaign.agentReasoning.riskFlags.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {campaign.agentReasoning.riskFlags.map((flag, i) => (
-                        <span
-                          key={i}
-                          className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-full px-2.5 py-0.5"
-                        >
-                          ⚠ {flag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
 
         {/* ── Review Sections (Audience + Messages + Channel) ───────────────── */}
         {(isReview || isLaunching || isResults) && campaign && (
@@ -1917,12 +1939,16 @@ export default function HomePage() {
           
           {/* Large Left Interactive Avatar Column */}
           <div className="lg:col-span-4 flex flex-col items-center text-center space-y-4">
-            <div className="relative group">
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-purple-600 via-rose-500 to-indigo-500 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-500 animate-tilt" />
-              <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] text-white border border-white/10 flex items-center justify-center shadow-2xl">
-                <span className="text-5xl md:text-6xl select-none">🍓</span>
-              </div>
-            </div>
+          <div className="relative group">
+  <div className="absolute -inset-1.5 bg-gradient-to-r from-purple-600 via-rose-500 to-indigo-500 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-500 animate-tilt" />
+  <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden shadow-2xl">
+  <img 
+  src="/aira-new.jpg" 
+  alt="Aira K. Salish" 
+  className="w-full h-full object-cover"
+/>
+  </div>
+</div>
             <div>
               <span className="text-[10px] font-mono tracking-[0.25em] bg-purple-950/50 border border-purple-800/40 text-purple-300 px-3 py-1 rounded-full uppercase font-bold">
                 AI/ML Student
@@ -1933,44 +1959,88 @@ export default function HomePage() {
 
           {/* Expanded Rich Dossier Text Column — PUNCHY & SOPHISTICATED */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="border-b border-slate-900 pb-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">Aira K. Salish</h2>
-                <span className="text-xs font-mono text-slate-500 tracking-wider">ID: RA2311026011017</span>
+            {/* Ultra-Premium Header Terminal Interface */}
+            <div className="border-b border-slate-900/80 pb-5 space-y-4">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    Aira K Salish
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                    <p className="text-xs font-mono text-purple-400 font-bold tracking-[0.2em] uppercase">
+                      System Operator // Intent Architect
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Meta ID Tag */}
+                <div className="bg-slate-900/40 border border-slate-800 px-3 py-1.5 rounded-lg backdrop-blur-sm select-none">
+                  <span className="text-[10px] font-mono text-slate-500 tracking-wider uppercase block text-right">Operator Node</span>
+                  <span className="text-[11px] font-mono text-slate-300 font-bold tracking-wide">RA2311026011017</span>
+                </div>
               </div>
-              <p className="text-xs font-mono text-purple-400 mt-1 font-bold tracking-widest uppercase">
-                System Operator // Intent Architect
-              </p>
+              
+              {/* Premium Interactive Social Pill Navigation */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest mr-2">Networks:</span>
+                
+                <a 
+                  href="https://linkedin.com/in/airasalish" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-2.5 py-1 rounded-md font-mono text-[11px] text-slate-400 border border-slate-900 bg-slate-950/40 hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-950/10 transition-all duration-200"
+                >
+                  linkedin
+                </a>
+                
+                <a 
+                  href="https://github.com/ayerahh" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-2.5 py-1 rounded-md font-mono text-[11px] text-slate-400 border border-slate-900 bg-slate-950/40 hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-950/10 transition-all duration-200"
+                >
+                  github
+                </a>
+                
+                <a 
+                  href="https://instagram.com/aira.kivy" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-2.5 py-1 rounded-md font-mono text-[11px] text-slate-400 border border-slate-900 bg-slate-950/40 hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-950/10 transition-all duration-200"
+                >
+                  instagram
+                </a>
+              </div>
             </div>
 
             {/* Tightened High-Contrast Directory */}
             <ul className="space-y-2.5 font-mono text-xs text-slate-300 leading-relaxed max-w-3xl">
-              <li>
-                <span className="text-purple-500 font-bold mr-2">▪</span>
-                <strong>Academic Track:</strong> B.Tech CSE student specializing in AI & ML at SRMIST.
-              </li>
-              <li>
-                <span className="text-purple-500 font-bold mr-2">▪</span>
-                <strong>Leadership:</strong> Technical Lead (AI/ML) at ACM Women (ACMW).
-              </li>
-              <li>
-                <span className="text-purple-500 font-bold mr-2">▪</span>
-                <strong>Industry Core:</strong> Former Prompt Engineering Intern at BabyBillion Pvt. Ltd.
-              </li>
-              <li>
-                <span className="text-purple-500 font-bold mr-2">▪</span>
-                <strong>Executive Benchmarks:</strong> Worked under Dinesh Godara (former VP at Unacademy, founder of BabyBillion).
-              </li>
-              <li>
-                <span className="text-purple-500 font-bold mr-2">▪</span>
-                <strong>Shipped Production:</strong> Generative AI Researcher for the Spotted app (founded by Amit Baradia).
-              </li>
-              <li>
-                <span className="text-purple-500 font-bold mr-2">▪</span>
-                <strong>Open Source & FinTech:</strong> Contributor via GSSoC · Graduate of CitiBridge by Citibank.
-              </li>
-            </ul>
-
+  <li>
+    <span className="text-purple-500 font-bold mr-2">▪</span>
+    <strong>Academic Track:</strong> B.Tech CSE student specializing in <span className="text-emerald-400/80">AI & ML</span> at SRMIST.
+  </li>
+  <li>
+    <span className="text-purple-500 font-bold mr-2">▪</span>
+    <strong>Leadership:</strong> Technical Lead (AI/ML) at <span className="text-rose-400/80">ACM Women (ACMW)</span>.
+  </li>
+  <li>
+    <span className="text-purple-500 font-bold mr-2">▪</span>
+    <strong>Industry Core:</strong> Former Prompt Engineering Intern at <span className="text-emerald-400/80">BabyBillion Pvt. Ltd.</span>
+  </li>
+  <li>
+    <span className="text-purple-500 font-bold mr-2">▪</span>
+    <strong>Executive Benchmarks:</strong> Worked under <span className="text-emerald-400/80">Dinesh Godara</span> (former VP at Unacademy, founder of BabyBillion).
+  </li>
+  <li>
+    <span className="text-purple-500 font-bold mr-2">▪</span>
+    <strong>Shipped Production:</strong> <span className="text-rose-400/80">Generative AI Researcher</span> for the Spotted app (founded by Amit Baradia).
+  </li>
+  <li>
+    <span className="text-purple-500 font-bold mr-2">▪</span>
+    <strong>Open Source & FinTech:</strong> Contributor via <span className="text-emerald-400/80">GSSoC</span> · Graduate of <span className="text-emerald-400/80">CitiBridge</span> Program 2026 by Citibank.
+  </li>
+</ul>
             {/* Vision Footer */}
             <div className="pt-3 border-t border-slate-900/60 text-slate-400 text-[11px] font-mono space-y-1">
               <div><span className="text-slate-600 mr-2">→</span><strong>Focus:</strong> Autonomous AI agents, intelligent automation, and failsafe tech layers.</div>

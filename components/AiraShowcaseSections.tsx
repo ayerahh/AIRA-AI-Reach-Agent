@@ -420,7 +420,7 @@ export function MegaFooter() {
 
 export function AttributionBar() {
   return (
-    <div className="w-full border-t border-slate-900 bg-slate-950/80 backdrop-blur-md relative z-30">
+    <div className="w-full border-t border-slate-900 bg-slate-950/80 backdrop-blur-md fixed bottom-0 left-0 right-0 z-30">
       <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
         <span>AIRA · Demo mode · All data simulated</span>
         <div className="flex items-center gap-4">

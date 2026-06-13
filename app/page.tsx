@@ -16,6 +16,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import TelemetryDashboard from "@/components/TelemetryDashboard";
+import { GuidedDemoSystem } from "@/components/GuidedDemoSystem";
 import {
   AchievementsSection,
   AboutBuilderSection,
@@ -512,17 +513,7 @@ function getContextualCustomer(goalText: string, customers?: any[]) {
   const best = scored.sort((a: any, b: any) => b.score - a.score)[0];
   return best ? best.customer : activeDataset[0];
 }
-const DEMO_STEPS = [
-  { title: "🎯 Welcome to AIRA", description: "AIRA is an AI-native CRM that turns natural language into complete marketing campaigns.", highlight: null },
-  { title: "📝 Step 1: Enter Your Campaign Goal", description: "Type any business objective in plain English.", highlight: "textarea" },
-  { title: "🧠 Step 2: AI Processing", description: "AIRA analyzes your goal and builds audience segments using Llama 3.3 AI.", highlight: null },
-  { title: "🎯 Step 3: Review Audience Segment", description: "See which customers match your goal - location, tier, and purchase history.", highlight: null },
-  { title: "✍️ Step 4: AI-Generated Messages", description: "3 message variants with different tones for each channel.", highlight: null },
-  { title: "📡 Step 5: Channel Selection", description: "AIRA recommends the best channel based on engagement history.", highlight: null },
-  { title: "✅ Step 6: Approve & Launch", description: "Review everything, then click Approve to launch.", highlight: null },
-  { title: "📊 Step 7: Live Analytics", description: "Watch real-time metrics update - opens, clicks, and revenue.", highlight: null },
-  { title: "🎉 Demo Complete!", description: "Now try your own campaign goal!", highlight: null }
-];
+// (Unused DEMO_STEPS removed for GuidedDemoSystem integration)
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -541,7 +532,6 @@ export default function HomePage() {
   const [debouncedText, setDebouncedText] = useState("");
   const [userName, setUserName] = useState("");
   const [guidedDemo, setGuidedDemo] = useState(false);
-const [demoStep, setDemoStep] = useState(0);
 
   // Session Operator Name States
   const [isEditingName, setIsEditingName] = useState(false);
@@ -1081,7 +1071,7 @@ const [demoStep, setDemoStep] = useState(0);
       {/* ============================================================
           SECTION 2: FULL-SCREEN BRANDING LANDING TAKEOVER (100vh Takeover)
           ============================================================ */}
-      <section className="w-screen h-screen min-h-screen bg-slate-950 relative flex flex-col justify-between items-center overflow-hidden p-8 md:p-16 border-t border-purple-500/10 z-10">
+      <section data-tour="platform-takeover" className="w-screen h-screen min-h-screen bg-slate-950 relative flex flex-col justify-between items-center overflow-hidden p-8 md:p-16 border-t border-purple-500/10 z-10">
         
         {/* Deep Field Ambient Grid Mask */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#090d16_1px,transparent_1px),linear-gradient(to_bottom,#090d16_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_80%,transparent_100%)] opacity-60 pointer-events-none" />
@@ -1261,7 +1251,7 @@ const [demoStep, setDemoStep] = useState(0);
 
 {/* ——— VIEWPORT 3: Goal Input Section ——— */}
 {(isIdle || isThinking) && (
-  <section className="mb-8 animate-slide-up delay-100">
+  <section data-tour="goal-input" className="mb-8 animate-slide-up delay-100">
     
     {/* MAIN SECTION LABEL */}
     <div className="text-center mb-6">
@@ -1519,7 +1509,7 @@ const [demoStep, setDemoStep] = useState(0);
         )}
 
 {/* ── VIEWPORT 2: Live Horizontal Pipeline Diagram Architecture ── */}
-<section className="min-h-[90vh] flex flex-col justify-center py-12 border-b border-slate-900/60 snap-start text-left">
+<section data-tour="pipeline-diagram" className="min-h-[90vh] flex flex-col justify-center py-12 border-b border-slate-900/60 snap-start text-left">
   <div className="space-y-2 mb-8">
     <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono flex items-center gap-2">
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1920,22 +1910,24 @@ const [demoStep, setDemoStep] = useState(0);
         </button>
       </div>
 
-      <TelemetryDashboard 
-        currentCampaign={campaign}
-        currentAnalytics={analytics}
-        onRestoreSnapshot={(savedCampaign, savedAnalytics) => {
-          setCampaign(savedCampaign);
-          setAnalytics(savedAnalytics);
-          setPhase(savedAnalytics ? "results" : "review");
-          setSelectedVariantId(savedCampaign.chosenVariantId);
-        }}
-      />
+      <div data-tour="observability-stack">
+        <TelemetryDashboard 
+          currentCampaign={campaign}
+          currentAnalytics={analytics}
+          onRestoreSnapshot={(savedCampaign, savedAnalytics) => {
+            setCampaign(savedCampaign);
+            setAnalytics(savedAnalytics);
+            setPhase(savedAnalytics ? "results" : "review");
+            setSelectedVariantId(savedCampaign.chosenVariantId);
+          }}
+        />
+      </div>
               </div>
 
       {/* ============================================================
           PORTFOLIO SHOWCASE BLOCK (UNLOCKED & ALWAYS VISIBLE)
           ============================================================ */}
-      <div className="w-full space-y-12 mt-12 animate-fade-in">
+      <div data-tour="showcase-sections" className="w-full space-y-12 mt-12 animate-fade-in">
         <AchievementsSection />
         <AIRoadmapSection />
         <KnownLimitationsSection />
@@ -2074,7 +2066,7 @@ const [demoStep, setDemoStep] = useState(0);
       {/* ============================================================
           FLOATING TOGGLE BUTTON (With Speech-Bubble Pointer Tail)
           ============================================================ */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-row-reverse items-center gap-3">
+      <div className="fixed bottom-36 right-6 z-50 flex flex-row-reverse items-center gap-3">
         
         {/* The Core Floating Circle Button Asset */}
         <button
@@ -2184,7 +2176,6 @@ const [demoStep, setDemoStep] = useState(0);
                   onClick={() => {
                     setShowWelcomeModal(false);
                     setGuidedDemo(true);
-                    setDemoStep(0);
                   }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white transition-all duration-200 shadow-lg shadow-purple-900/30 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                 >
@@ -2208,71 +2199,16 @@ const [demoStep, setDemoStep] = useState(0);
       <MegaFooter />
       <AttributionBar />
 
-      {/* ============================================================
-          GUIDED DEMO INTERACTIVE ENGINE OVERLAY (WITH DEBUG)
-          ============================================================ */}
-      {guidedDemo && (
-        <>
-          {/* VISUAL TEST: Flashes a green box at top-left to prove the state is TRUE */}
-          <div className="fixed top-4 left-4 z-[999] bg-emerald-500 border border-emerald-400 text-slate-950 font-mono text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl uppercase tracking-wider animate-bounce">
-            🛰️ DEBUG: guidedDemo = true
-          </div>
-
-          <div id="guided-demo-overlay" className="guided-demo-overlay fixed inset-0 z-[200] bg-black/70 flex items-end justify-center pb-32">
-            <div className="w-[90%] max-w-md bg-slate-950 border border-purple-500/30 rounded-2xl p-6 shadow-2xl animate-slide-up">
-              
-              {/* Progress Tracker Stream */}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300" 
-                    style={{ width: `${((demoStep + 1) / DEMO_STEPS.length) * 100}%` }} 
-                  />
-                </div>
-                <span className="text-[10px] text-slate-500 font-mono">{demoStep + 1}/{DEMO_STEPS.length}</span>
-              </div>
-              
-              {/* Content Render Cards */}
-              <h3 className="text-xl font-bold text-white mb-2 font-mono">{DEMO_STEPS[demoStep].title}</h3>
-              <p className="text-sm text-slate-400 mb-6 font-mono leading-relaxed">{DEMO_STEPS[demoStep].description}</p>
-              
-              {/* Operational Control Array */}
-              <div className="flex gap-3 font-mono text-xs">
-                {demoStep > 0 && (
-                  <button 
-                    onClick={() => setDemoStep(demoStep - 1)} 
-                    className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-900 transition-all"
-                  >
-                    ← Previous
-                  </button>
-                )}
-                {demoStep < DEMO_STEPS.length - 1 ? (
-                  <button 
-                    onClick={() => setDemoStep(demoStep + 1)} 
-                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold"
-                  >
-                    Next →
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => setGuidedDemo(false)} 
-                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold"
-                  >
-                    🎉 Start Using AIRA
-                  </button>
-                )}
-              </div>
-              
-              <button 
-                onClick={() => setGuidedDemo(false)} 
-                className="w-full mt-3 text-[10px] text-slate-600 hover:text-slate-400 text-center font-mono block transition-colors"
-              >
-                Skip demo
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      {/* ===== GUIDED DEMO SYSTEM ===== */}
+      <GuidedDemoSystem
+        isActive={guidedDemo}
+        onClose={() => setGuidedDemo(false)}
+        onDemoComplete={() => {
+          setGuidedDemo(false);
+          localStorage.setItem("aira_demo_seen", "true");
+          localStorage.setItem("aira_has_seen_welcome", "true");
+        }}
+      />
       
     </div>
   );

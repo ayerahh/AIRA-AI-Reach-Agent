@@ -512,7 +512,17 @@ function getContextualCustomer(goalText: string, customers?: any[]) {
   const best = scored.sort((a: any, b: any) => b.score - a.score)[0];
   return best ? best.customer : activeDataset[0];
 }
-
+const DEMO_STEPS = [
+  { title: "🎯 Welcome to AIRA", description: "AIRA is an AI-native CRM that turns natural language into complete marketing campaigns.", highlight: null },
+  { title: "📝 Step 1: Enter Your Campaign Goal", description: "Type any business objective in plain English.", highlight: "textarea" },
+  { title: "🧠 Step 2: AI Processing", description: "AIRA analyzes your goal and builds audience segments using Llama 3.3 AI.", highlight: null },
+  { title: "🎯 Step 3: Review Audience Segment", description: "See which customers match your goal - location, tier, and purchase history.", highlight: null },
+  { title: "✍️ Step 4: AI-Generated Messages", description: "3 message variants with different tones for each channel.", highlight: null },
+  { title: "📡 Step 5: Channel Selection", description: "AIRA recommends the best channel based on engagement history.", highlight: null },
+  { title: "✅ Step 6: Approve & Launch", description: "Review everything, then click Approve to launch.", highlight: null },
+  { title: "📊 Step 7: Live Analytics", description: "Watch real-time metrics update - opens, clicks, and revenue.", highlight: null },
+  { title: "🎉 Demo Complete!", description: "Now try your own campaign goal!", highlight: null }
+];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -530,6 +540,8 @@ export default function HomePage() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [debouncedText, setDebouncedText] = useState("");
   const [userName, setUserName] = useState("");
+  const [guidedDemo, setGuidedDemo] = useState(false);
+const [demoStep, setDemoStep] = useState(0);
 
   // Session Operator Name States
   const [isEditingName, setIsEditingName] = useState(false);
@@ -1197,6 +1209,8 @@ export default function HomePage() {
         </div>
       </header>
 
+      
+
   {/* ============================================================
       ONE PROMPT, FULL CAMPAIGN CORE HEADER + VIDEO LAYER
       ============================================================ */}
@@ -1376,7 +1390,7 @@ export default function HomePage() {
         ) : (
           <>
             <Zap size={22} className="text-purple-300" />
-            <span className="text-base">Run AIRA Agent</span>
+            <span className="text-base">Run AIRA</span>
             <ArrowRight size={18} className="text-purple-300" />
           </>
         )}
@@ -2166,14 +2180,21 @@ export default function HomePage() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 w-full">
-                <button
-                  onClick={handleStartDemo}
+              <button
+                  onClick={() => {
+                    setShowWelcomeModal(false);
+                    setGuidedDemo(true);
+                    setDemoStep(0);
+                  }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white transition-all duration-200 shadow-lg shadow-purple-900/30 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  ⚡ Yes, Show Me Demo
+                  🚀 Yes, Start Guided Tour
                 </button>
                 <button
-                  onClick={handleCloseWelcome}
+                  onClick={() => {
+                    setShowWelcomeModal(false);
+                    localStorage.setItem('aira_demo_seen', 'true');
+                  }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200 transition-all hover:bg-slate-900/60"
                 >
                   No thanks, I'll write mine
@@ -2186,6 +2207,73 @@ export default function HomePage() {
 
       <MegaFooter />
       <AttributionBar />
+
+      {/* ============================================================
+          GUIDED DEMO INTERACTIVE ENGINE OVERLAY (WITH DEBUG)
+          ============================================================ */}
+      {guidedDemo && (
+        <>
+          {/* VISUAL TEST: Flashes a green box at top-left to prove the state is TRUE */}
+          <div className="fixed top-4 left-4 z-[999] bg-emerald-500 border border-emerald-400 text-slate-950 font-mono text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl uppercase tracking-wider animate-bounce">
+            🛰️ DEBUG: guidedDemo = true
+          </div>
+
+          <div id="guided-demo-overlay" className="guided-demo-overlay fixed inset-0 z-[200] bg-black/70 flex items-end justify-center pb-32">
+            <div className="w-[90%] max-w-md bg-slate-950 border border-purple-500/30 rounded-2xl p-6 shadow-2xl animate-slide-up">
+              
+              {/* Progress Tracker Stream */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300" 
+                    style={{ width: `${((demoStep + 1) / DEMO_STEPS.length) * 100}%` }} 
+                  />
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono">{demoStep + 1}/{DEMO_STEPS.length}</span>
+              </div>
+              
+              {/* Content Render Cards */}
+              <h3 className="text-xl font-bold text-white mb-2 font-mono">{DEMO_STEPS[demoStep].title}</h3>
+              <p className="text-sm text-slate-400 mb-6 font-mono leading-relaxed">{DEMO_STEPS[demoStep].description}</p>
+              
+              {/* Operational Control Array */}
+              <div className="flex gap-3 font-mono text-xs">
+                {demoStep > 0 && (
+                  <button 
+                    onClick={() => setDemoStep(demoStep - 1)} 
+                    className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-900 transition-all"
+                  >
+                    ← Previous
+                  </button>
+                )}
+                {demoStep < DEMO_STEPS.length - 1 ? (
+                  <button 
+                    onClick={() => setDemoStep(demoStep + 1)} 
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold"
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setGuidedDemo(false)} 
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold"
+                  >
+                    🎉 Start Using AIRA
+                  </button>
+                )}
+              </div>
+              
+              <button 
+                onClick={() => setGuidedDemo(false)} 
+                className="w-full mt-3 text-[10px] text-slate-600 hover:text-slate-400 text-center font-mono block transition-colors"
+              >
+                Skip demo
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+      
     </div>
   );
 }

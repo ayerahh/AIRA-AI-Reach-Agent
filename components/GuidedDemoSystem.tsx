@@ -70,12 +70,14 @@ interface HighlightPosition {
 interface GuidedDemoSystemProps {
   isActive?: boolean;
   onClose?: () => void;
+  onStart?: () => void;
   onDemoComplete?: () => void;
 }
 
 export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
   isActive: externalActive,
   onClose,
+  onStart,
   onDemoComplete
 }) => {
   const [localActive, setLocalActive] = useState(false);
@@ -92,6 +94,9 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
   const setIsActive = (val: boolean) => {
     if (externalActive === undefined) {
       setLocalActive(val);
+    }
+    if (val && onStart) {
+      onStart();
     }
     if (!val && onClose) {
       onClose();
@@ -150,22 +155,76 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
     }
 
     const updateHighlight = () => {
-      const target = document.querySelector(GUIDED_TOUR_STEPS[currentStep].target!);
+      const target = document.querySelector(GUIDED_TOUR_STEPS[currentStep].target!) as HTMLElement;
       if (target) {
-        const rect = target.getBoundingClientRect();
         const padding = GUIDED_TOUR_STEPS[currentStep].highlightPadding;
         
+        // Helper to get absolute position relative to document
+        const getAbsoluteCoords = (el: HTMLElement) => {
+          const r = el.getBoundingClientRect();
+          const scrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          const scrollX = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+          return {
+            top: r.top + scrollY,
+            left: r.left + scrollX,
+            width: r.width,
+            height: r.height
+          };
+        };
+
+        const initialCoords = getAbsoluteCoords(target);
+
+        // Position highlight frame immediately
         setHighlightPos({
-          top: window.scrollY + rect.top - padding,
-          left: rect.left - padding,
-          width: rect.width + padding * 2,
-          height: rect.height + padding * 2
+          top: initialCoords.top - padding,
+          left: initialCoords.left - padding,
+          width: initialCoords.width + padding * 2,
+          height: initialCoords.height + padding * 2
         });
 
-        // Smooth scroll to element
+        // Custom smooth scroll centering engine using requestAnimationFrame
+        const smoothScrollTo = (targetY: number, duration: number = 500) => {
+          const startY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          const difference = targetY - startY;
+          const startTime = performance.now();
+
+          const step = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Ease-in-out quadratic curve
+            const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+            const scrollPos = startY + difference * ease;
+            
+            window.scrollTo(0, scrollPos);
+            if (document.documentElement) document.documentElement.scrollTop = scrollPos;
+            if (document.body) document.body.scrollTop = scrollPos;
+
+            if (progress < 1) {
+              requestAnimationFrame(step);
+            }
+          };
+
+          requestAnimationFrame(step);
+        };
+
+        // Scroll page so the target element is vertically centered in the viewport
+        const targetY = initialCoords.top - (window.innerHeight / 2) + (initialCoords.height / 2);
+        
         setIsScrolling(true);
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => setIsScrolling(false), 600);
+        smoothScrollTo(Math.max(0, targetY), 500);
+
+        // Recalculate and lock position once smooth scroll settles (600ms)
+        setTimeout(() => {
+          const settledCoords = getAbsoluteCoords(target);
+          setHighlightPos({
+            top: settledCoords.top - padding,
+            left: settledCoords.left - padding,
+            width: settledCoords.width + padding * 2,
+            height: settledCoords.height + padding * 2
+          });
+          setIsScrolling(false);
+        }, 650);
       } else {
         // Fallback if target element is not rendered
         setHighlightPos(null);
@@ -173,14 +232,12 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
     };
 
     // Delay slightly to allow any phase transitions to render
-    const timer = setTimeout(updateHighlight, 100);
+    const timer = setTimeout(updateHighlight, 200);
     window.addEventListener('resize', updateHighlight);
-    window.addEventListener('scroll', updateHighlight);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updateHighlight);
-      window.removeEventListener('scroll', updateHighlight);
     };
   }, [isActive, currentStep]);
 
@@ -241,45 +298,6 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
   const currentStepData = GUIDED_TOUR_STEPS[currentStep];
   const progress = ((currentStep + 1) / GUIDED_TOUR_STEPS.length) * 100;
 
-  // Calculate tooltip position based on step configuration
-  const getTooltipPosition = () => {
-    if (!highlightPos) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-
-    const position = currentStepData.position;
-    const offset = 24;
-
-    switch (position) {
-      case 'bottom':
-        return {
-          top: `${highlightPos.top + highlightPos.height + offset}px`,
-          left: `${highlightPos.left + highlightPos.width / 2}px`,
-          transform: 'translateX(-50%)',
-          maxWidth: '320px'
-        };
-      case 'top':
-        return {
-          top: `${highlightPos.top - offset}px`,
-          left: `${highlightPos.left + highlightPos.width / 2}px`,
-          transform: 'translateX(-50%) translateY(-100%)',
-          maxWidth: '320px'
-        };
-      case 'left':
-        return {
-          top: `${highlightPos.top + highlightPos.height / 2}px`,
-          left: `${highlightPos.left - offset}px`,
-          transform: 'translateX(-100%) translateY(-50%)',
-          maxWidth: '280px'
-        };
-      default: // center
-        return {
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          maxWidth: '400px'
-        };
-    }
-  };
-
   return (
     <>
       {/* Start button - position where you want it */}
@@ -294,102 +312,112 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
 
       {isActive && (
         <>
-          {/* Overlay */}
-          <div className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm transition-opacity duration-300" />
+          {/* Transparent click blocker to prevent clicks on page during active tour steps */}
+          <div className="fixed inset-0 z-[90] bg-transparent pointer-events-auto" />
+
+          {/* Dark blurred overlay shown ONLY when there is no target highlighted (center steps, e.g. welcome) */}
+          {!highlightPos && (
+            <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md transition-opacity duration-300" />
+          )}
 
           {/* Spotlight/Highlight Box */}
           {highlightPos && (
             <div
               ref={highlightRef}
-              className="fixed z-[100] border-2 border-[#ec4899] rounded-2xl pointer-events-none transition-all duration-300"
+              className="absolute z-[100] border-2 border-[#ec4899] rounded-2xl pointer-events-none transition-all duration-300"
               style={{
                 top: `${highlightPos.top}px`,
                 left: `${highlightPos.left}px`,
                 width: `${highlightPos.width}px`,
                 height: `${highlightPos.height}px`,
-                boxShadow: '0 0 0 9999px rgba(2, 6, 23, 0.65)',
+                boxShadow: '0 0 0 9999px rgba(2, 6, 23, 0.7)',
                 animation: 'pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
               }}
             >
               <style>{`
                 @keyframes pulse-border {
-                  0%, 100% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.65), 0 0 0 2px rgba(236, 72, 153, 0.8); }
-                  50% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.65), 0 0 0 2px rgba(236, 72, 153, 0.3); }
+                  0%, 100% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.7), 0 0 0 2px rgba(236, 72, 153, 0.8); }
+                  50% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.7), 0 0 0 2px rgba(236, 72, 153, 0.3); }
                 }
                 @keyframes slide-up {
-                  from { opacity: 0; transform: translateY(20px); }
+                  from { opacity: 0; transform: translateY(10px); }
                   to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-slide-up {
+                  animation: slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
                 }
               `}</style>
             </div>
           )}
 
-          {/* Tooltip Card */}
+          {/* Fixed Tooltip Card Container */}
           <div
-            className="fixed z-[110] bg-slate-950/95 border border-purple-500/20 rounded-2xl p-6 shadow-2xl transition-all duration-300 backdrop-blur-md"
-            style={{
-              ...getTooltipPosition() as any,
-              animation: 'slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-            }}
+            className={highlightPos 
+              ? "fixed bottom-8 left-1/2 -translate-x-1/2 z-[110] w-[90vw] max-w-md transition-all duration-300"
+              : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] w-[90vw] max-w-md transition-all duration-300"
+            }
           >
-            {/* Progress Bar */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#ef4444] via-[#ec4899] to-indigo-500 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progress}%` }}
-                />
+            {/* Tooltip Card Content */}
+            <div className="bg-slate-950/95 border border-purple-500/20 rounded-2xl p-6 shadow-2xl backdrop-blur-md animate-slide-up">
+              {/* Progress Bar */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#ef4444] via-[#ec4899] to-indigo-500 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-mono font-medium text-slate-400">
+                  {currentStep + 1}/{GUIDED_TOUR_STEPS.length}
+                </span>
               </div>
-              <span className="text-[10px] font-mono font-medium text-slate-400">
-                {currentStep + 1}/{GUIDED_TOUR_STEPS.length}
-              </span>
+
+              {/* Title & Description */}
+              <h3 className="text-sm font-bold text-white mb-2 uppercase tracking-wide">
+                {currentStepData.title}
+              </h3>
+              <p className="text-xs text-slate-300 mb-6 leading-relaxed">
+                {currentStepData.description}
+              </p>
+
+              {/* Navigation Buttons */}
+              <div className="flex gap-3 mb-3 font-mono text-xs">
+                {currentStep > 0 && (
+                  <button
+                    onClick={handlePrevStep}
+                    disabled={isScrolling}
+                    className="flex-1 py-2 px-3 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 disabled:opacity-50 transition-colors font-medium"
+                  >
+                    ← Back
+                  </button>
+                )}
+
+                {currentStep < GUIDED_TOUR_STEPS.length - 1 ? (
+                  <button
+                    onClick={handleNextStep}
+                    disabled={isScrolling}
+                    className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-[#ec4899] text-white disabled:opacity-50 transition-all font-bold hover:brightness-115"
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCompleteTour}
+                    className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white transition-all font-bold hover:brightness-115"
+                  >
+                    🚀 End Tour
+                  </button>
+                )}
+              </div>
+
+              {/* Skip Option */}
+              <button
+                onClick={handleSkipTour}
+                className="w-full py-1 text-[10px] text-slate-600 hover:text-slate-400 transition-colors font-medium font-mono uppercase tracking-wider"
+              >
+                Skip tour
+              </button>
             </div>
-
-            {/* Title & Description */}
-            <h3 className="text-sm font-bold text-white mb-2 uppercase tracking-wide">
-              {currentStepData.title}
-            </h3>
-            <p className="text-xs text-slate-300 mb-6 leading-relaxed">
-              {currentStepData.description}
-            </p>
-
-            {/* Navigation Buttons */}
-            <div className="flex gap-3 mb-3 font-mono text-xs">
-              {currentStep > 0 && (
-                <button
-                  onClick={handlePrevStep}
-                  disabled={isScrolling}
-                  className="flex-1 py-2 px-3 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 disabled:opacity-50 transition-colors font-medium"
-                >
-                  ← Back
-                </button>
-              )}
-
-              {currentStep < GUIDED_TOUR_STEPS.length - 1 ? (
-                <button
-                  onClick={handleNextStep}
-                  disabled={isScrolling}
-                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-[#ec4899] text-white disabled:opacity-50 transition-all font-bold hover:brightness-115"
-                >
-                  Next →
-                </button>
-              ) : (
-                <button
-                  onClick={handleCompleteTour}
-                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white transition-all font-bold hover:brightness-115"
-                >
-                  🚀 End Tour
-                </button>
-              )}
-            </div>
-
-            {/* Skip Option */}
-            <button
-              onClick={handleSkipTour}
-              className="w-full py-1 text-[10px] text-slate-600 hover:text-slate-400 transition-colors font-medium font-mono uppercase tracking-wider"
-            >
-              Skip tour
-            </button>
           </div>
         </>
       )}

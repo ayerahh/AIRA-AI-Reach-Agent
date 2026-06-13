@@ -2202,6 +2202,7 @@ export default function HomePage() {
       {/* ===== GUIDED DEMO SYSTEM ===== */}
       <GuidedDemoSystem
         isActive={guidedDemo}
+        onStart={() => setGuidedDemo(true)}
         onClose={() => setGuidedDemo(false)}
         onDemoComplete={() => {
           setGuidedDemo(false);

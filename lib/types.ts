@@ -197,6 +197,7 @@ export interface CampaignAnalytics {
   openRate: number;
   clickRate: number;
   estimatedRevenue: number;    // ₹
+  ordersCalculated: number;
   channelBreakdown: ChannelBreakdown[];
   computedAt: string;
 }

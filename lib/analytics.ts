@@ -22,6 +22,7 @@ export function computeCampaignAnalytics(
   const openRate = delivered > 0 ? opened / delivered : 0;
   const clickRate = opened > 0 ? clicked / opened : 0;
   const estimatedRevenue = clicked * randomBetween(2, 5) * (avgOrderValue / 10);
+  const ordersCalculated = Math.floor(clicked * 0.1);
 
   return {
     campaignId,
@@ -36,6 +37,7 @@ export function computeCampaignAnalytics(
     openRate,
     clickRate,
     estimatedRevenue: Math.round(estimatedRevenue),
+    ordersCalculated,
     channelBreakdown: [
       {
         channel,

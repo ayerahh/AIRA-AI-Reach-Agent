@@ -1,3 +1,4 @@
+const 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 = process.env.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;
 /**
  * AIRA Agent Service — lib/agent.ts
  * INTEGRATED WITH REAL GROQ LLM (Llama 3.3 70B)

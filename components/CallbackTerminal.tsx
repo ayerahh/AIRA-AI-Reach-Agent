@@ -16,24 +16,32 @@ interface CallbackTerminalProps {
 
 export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds }: CallbackTerminalProps) {
   const [logs, setLogs] = useState<TelemetryEvent[]>([]);
-  const logEndRef = useRef<HTMLDivElement>(null);
+  const terminalScrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll the terminal as fresh logs stream in
+  // PRECISE INTERIOR SCROLL BOX REGULATION
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scrollBox = terminalScrollContainerRef.current;
+    if (!scrollBox) return;
+
+    // Check if the user is looking at the baseline logs window view matrix
+    const isAtBottom = scrollBox.scrollHeight - scrollBox.scrollTop <= scrollBox.clientHeight + 60;
+    
+    if (isAtBottom) {
+      scrollBox.scrollTo({
+        top: scrollBox.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [logs]);
 
-  // Simulate real-time streaming telemetry based on the active asynchronous loop
   useEffect(() => {
     if (!isCampaignActive || matchedCustomerIds.length === 0) {
-      if (!isCampaignActive) setLogs([]); // Reset log stream on fresh cycles
+      if (!isCampaignActive) setLogs([]);
       return;
     }
 
     let isMounted = true;
-    let logCounter = 0;
     
-    // Seed an initial system initialization packet
     const initEvent: TelemetryEvent = {
       id: `sys-${Date.now()}`,
       timestamp: new Date().toLocaleTimeString(),
@@ -42,17 +50,14 @@ export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds 
     };
     setLogs([initEvent]);
 
-    // Helper to generate randomized sequential tracking network events
     const generateStream = async () => {
-      // Shuffle target array to simulate asynchronous out-of-order network arrival
       const targetIds = [...matchedCustomerIds].sort(() => Math.random() - 0.5);
       
       for (const id of targetIds) {
         if (!isMounted) break;
 
-        // 1. Simulate Outbound Delivery Handshake
         await new Promise((resolve) => setTimeout(resolve, Math.random() * 800 + 300));
-        const isFailure = Math.random() < 0.05; // 5% mock failure rate for realism
+        const isFailure = Math.random() < 0.05;
         
         const deliveryLog: TelemetryEvent = {
           id: `del-${id}-${Date.now()}`,
@@ -64,9 +69,8 @@ export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds 
         };
         
         if (isMounted) setLogs((prev) => [...prev, deliveryLog]);
-        if (isFailure) continue; // Skip interactions for dropped packets
+        if (isFailure) continue;
 
-        // 2. Simulate User Open Event
         if (Math.random() > 0.3) {
           await new Promise((resolve) => setTimeout(resolve, Math.random() * 1200 + 400));
           const openLog: TelemetryEvent = {
@@ -77,7 +81,6 @@ export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds 
           };
           if (isMounted) setLogs((prev) => [...prev, openLog]);
 
-          // 3. Simulate High-Value Conversion Click Event
           if (Math.random() > 0.4) {
             await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000 + 500));
             const clickLog: TelemetryEvent = {
@@ -93,16 +96,13 @@ export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds 
     };
 
     generateStream();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [isCampaignActive, matchedCustomerIds]);
 
   return (
     <div className="w-full rounded-xl border border-slate-800 bg-slate-950 font-mono text-xs text-slate-300 shadow-2xl overflow-hidden">
-      {/* Terminal Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2.5">
+      {/* Header Panel Control Bar */}
+      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2.5 select-none">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-red-500/80"></div>
           <div className="h-3 w-3 rounded-full bg-yellow-500/80"></div>
@@ -119,10 +119,13 @@ export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds 
         </div>
       </div>
 
-      {/* Terminal Output Body */}
-      <div className="h-64 overflow-y-auto p-4 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-800">
+      {/* ISOLATED VIEWPORT FRAME: Confines scrolling completely to this explicit container block */}
+      <div 
+        ref={terminalScrollContainerRef}
+        className="h-64 overflow-y-auto p-4 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-800 bg-slate-950 text-slate-300"
+      >
         {logs.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-slate-600 italic">
+          <div className="flex h-full items-center justify-center text-slate-600 italic select-none">
             Awaiting system execution... Trigger "Launch Campaign" to intercept network webhooks.
           </div>
         ) : (
@@ -142,7 +145,6 @@ export default function CallbackTerminal({ isCampaignActive, matchedCustomerIds 
             </div>
           ))
         )}
-        <div ref={logEndRef} />
       </div>
     </div>
   );

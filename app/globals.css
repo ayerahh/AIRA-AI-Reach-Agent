@@ -125,3 +125,105 @@
   height: 24px;
   background: linear-gradient(to bottom, #3D4468, transparent);
 }
+.bg-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.light-theme-active {
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+}
+
+.light-theme-active .bg-grid {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+}
+
+/* ── 2026 Premium Creative UI Enhancements ──────────────── */
+
+/* Mesh Gradient Orbs Animation */
+@keyframes floatOrbOne {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes floatOrbTwo {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-40px, 40px) scale(1.15); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-orb-one {
+  animation: floatOrbOne 16s ease-in-out infinite;
+}
+
+.animate-orb-two {
+  animation: floatOrbTwo 20s ease-in-out infinite;
+}
+
+/* Concentric Neural Core Rotations */
+@keyframes rotateClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rotateCounterClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes breathingAura {
+  0%, 100% { opacity: 0.15; transform: scale(1) translate(-50%, -50%); }
+  50% { opacity: 0.35; transform: scale(1.2) translate(-50%, -50%); }
+}
+
+.animate-spin-slow {
+  animation: rotateClockwise 24s linear infinite;
+}
+
+.animate-spin-reverse-slow {
+  animation: rotateCounterClockwise 30s linear infinite;
+}
+
+.animate-breathing-aura {
+  animation: breathingAura 6s ease-in-out infinite;
+}
+
+/* Glassmorphism Textures */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-hover {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 15px rgba(99, 102, 241, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Premium text input glow */
+.premium-input-focus {
+  transition: all 0.3s ease;
+}
+.premium-input-focus:focus {
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+

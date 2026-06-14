@@ -1,0 +1,74 @@
+[
+  {
+    "id": "salary-day",
+    "name": "Salary Day Boost",
+    "multiplier": 1.2,
+    "tone": "celebratory, refreshing, premium",
+    "personas": ["Regular Customer", "Loyal Customer"],
+    "rule": "day 30-31 or 1-5 of any month",
+    "recommendedAudience": "Regular Customers & Loyal Customers",
+    "expectedLift": "+25% Conversions",
+    "recommendedChannel": "Email",
+    "potentialRevenue": "₹85,000"
+  },
+  {
+    "id": "black-friday",
+    "name": "Black Friday Sale",
+    "multiplier": 2.0,
+    "tone": "urgent, high-value, exclusive",
+    "personas": ["Discount Hunter", "Impulse Shopper"],
+    "rule": "day 24-27 of any month",
+    "recommendedAudience": "Discount Hunters & Impulse Shopper",
+    "expectedLift": "+65% Conversions",
+    "recommendedChannel": "SMS",
+    "potentialRevenue": "₹2,50,000"
+  },
+  {
+    "id": "diwali",
+    "name": "Diwali Festive Season",
+    "multiplier": 1.8,
+    "tone": "festive, warm, generous",
+    "personas": ["Luxury Buyer", "Loyal Customer"],
+    "rule": "day 10-15 of any month",
+    "recommendedAudience": "Gift Shoppers & Luxury Buyers",
+    "expectedLift": "+42% Conversions",
+    "recommendedChannel": "WhatsApp",
+    "potentialRevenue": "₹1,20,000"
+  },
+  {
+    "id": "new-year",
+    "name": "New Year Resolution",
+    "multiplier": 1.3,
+    "tone": "inspirational, hopeful, fresh-start",
+    "personas": ["Inactive Customer", "Regular Customer"],
+    "rule": "day 28-29 of any month",
+    "recommendedAudience": "Inactive Customers",
+    "expectedLift": "+30% Conversions",
+    "recommendedChannel": "Email",
+    "potentialRevenue": "₹95,000"
+  },
+  {
+    "id": "ipl-season",
+    "name": "IPL Cricket Season",
+    "multiplier": 1.1,
+    "tone": "energetic, competitive, lively",
+    "personas": ["Fitness Freak", "Regular Customer"],
+    "rule": "April and May",
+    "recommendedAudience": "Fitness Freaks",
+    "expectedLift": "+20% Conversions",
+    "recommendedChannel": "WhatsApp",
+    "potentialRevenue": "₹65,000"
+  },
+  {
+    "id": "wedding-season",
+    "name": "Wedding & Festive Season",
+    "multiplier": 1.4,
+    "tone": "elegant, premium, celebration-ready",
+    "personas": ["Luxury Buyer", "Loyal Customer"],
+    "rule": "June",
+    "recommendedAudience": "Luxury Buyers & Loyal Customers",
+    "expectedLift": "+35% Conversions",
+    "recommendedChannel": "WhatsApp",
+    "potentialRevenue": "₹1,40,000"
+  }
+]

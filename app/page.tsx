@@ -17,6 +17,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import TelemetryDashboard from "@/components/TelemetryDashboard";
 import { GuidedDemoSystem } from "@/components/GuidedDemoSystem";
+import BusinessOnboardingPortal from "@/components/BusinessOnboardingPortal";
+import TopCustomerSpotlight from "@/components/TopCustomerSpotlight";
 import {
   AchievementsSection,
   AboutBuilderSection,
@@ -532,6 +534,76 @@ export default function HomePage() {
   const [debouncedText, setDebouncedText] = useState("");
   const [userName, setUserName] = useState("");
   const [guidedDemo, setGuidedDemo] = useState(false);
+
+  // Ingestion portal states
+  const [importType, setImportType] = useState<"beauty-brand" | "fitness-brand">("beauty-brand");
+  const [importCustomerCount, setImportCustomerCount] = useState<number>(50);
+  const [importOrdersPerCustomer, setImportOrdersPerCustomer] = useState<number>(5);
+  const [isImporting, setIsImporting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [importResult, setImportResult] = useState<any>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const handleImport = async () => {
+    setIsImporting(true);
+    setToast(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 15000);
+
+    try {
+      const response = await fetch("/api/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: importType,
+          customerCount: importCustomerCount,
+          ordersPerCustomer: importOrdersPerCustomer,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setToast({
+          type: "success",
+          message: `Imported ${data.customersAdded} customers and ${data.ordersAdded} orders. (${data.duplicatesSkipped} duplicates skipped).`,
+        });
+      } else {
+        setToast({
+          type: "error",
+          message: data.error || "Failed to import customers.",
+        });
+      }
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        setToast({
+          type: "error",
+          message: "Import process timed out (exceeded 15 seconds).",
+        });
+      } else {
+        setToast({
+          type: "error",
+          message: err.message || "An unexpected error occurred during import.",
+        });
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   // Session Operator Name States
   const [isEditingName, setIsEditingName] = useState(false);
@@ -1265,11 +1337,18 @@ export default function HomePage() {
       // SYSTEM STREAM LIVE TELEMETRY LOOP
     </p>
     
-    <p className="text-center font-mono text-[10px] text-slate-500 mt-3">
-      // SYSTEM WALKTHROUGH • 2 MIN RUNTIME
-    </p>
   </div>
 
+  {/* ============================================================
+      AI BUSINESS ONBOARDING PORTAL (Inputs, Intelligence Report)
+      ============================================================ */}
+  {(isIdle || isThinking) && (
+    <BusinessOnboardingPortal onImportSuccess={setImportResult} />
+  )}
+
+  {(isIdle || isThinking) && importResult && (
+    <TopCustomerSpotlight importResult={importResult} />
+  )}
 
 {/* ——— VIEWPORT 3: Goal Input Section ——— */}
 {(isIdle || isThinking) && (
@@ -1530,7 +1609,8 @@ export default function HomePage() {
           </section>
         )}
 
-{/* ── VIEWPORT 2: Live Horizontal Pipeline Diagram Architecture ── */}
+{/* ── VIEWPORT 2: Live Horizontal Pipeline Diagram Architecture ── (COMMENTED OUT) */}
+{false && (
 <section data-tour="pipeline-diagram" className="min-h-[90vh] flex flex-col justify-center py-12 border-b border-slate-900/60 snap-start text-left">
   <div className="space-y-2 mb-8">
     <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono flex items-center gap-2">
@@ -1690,6 +1770,7 @@ export default function HomePage() {
     </div>
   </div>
 </section>
+)}
 
 {/* Deep immersion space transition padding to clear fold layers before goal panel */}
 <div className="h-[20vh] w-full" />
@@ -2218,6 +2299,120 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* ============================================================
+          DATA INGESTION PORTAL (Import Panel) - COMMENTED OUT
+          ============================================================ */}
+      {false && (
+      <section className="border-t border-slate-900 bg-slate-950/40 backdrop-blur-sm py-10 px-4 md:px-8 select-none">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-900">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                <span className="text-purple-500">⚡</span> Data Ingestion Portal
+              </h2>
+              <p className="text-xs text-text-muted mt-1 font-mono">
+                Simulate bulk CRM imports for testing segment filters and telemetry logs.
+              </p>
+            </div>
+            
+            {/* Status indicators */}
+            <div className="flex items-center gap-3">
+              <div className="bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 rounded-lg text-[10px] font-mono text-slate-400">
+                Safe Limit: <span className="text-rose-400 font-bold">2,000 max</span>
+              </div>
+              <div className="bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 rounded-lg text-[10px] font-mono text-slate-400">
+                Import Limit: <span className="text-purple-400 font-bold">100 cust / 500 ord</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 items-end gap-4 mt-6">
+            {/* Dropdown for Brand Type */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider font-mono text-slate-500 block">
+                Brand Vertical
+              </label>
+              <select
+                value={importType}
+                onChange={(e) => setImportType(e.target.value as any)}
+                disabled={isImporting}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed font-sans transition-all"
+              >
+                <option value="beauty-brand">💄 Beauty Brand (₹500 - ₹3000)</option>
+                <option value="fitness-brand">💪 Fitness Brand (₹800 - ₹2500)</option>
+              </select>
+            </div>
+
+            {/* Input for Customer Count */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider font-mono text-slate-500 block">
+                Customer Count (1 - 100)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={importCustomerCount}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setImportCustomerCount(isNaN(val) ? 0 : val);
+                }}
+                disabled={isImporting}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed font-mono transition-all"
+              />
+            </div>
+
+            {/* Input for Orders Per Customer */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider font-mono text-slate-500 block">
+                Orders / Customer (1 - 10)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={importOrdersPerCustomer}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setImportOrdersPerCustomer(isNaN(val) ? 0 : val);
+                }}
+                disabled={isImporting}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed font-mono transition-all"
+              />
+            </div>
+
+            {/* Import Button */}
+            <button
+              onClick={handleImport}
+              disabled={isImporting || importCustomerCount < 1 || importCustomerCount > 100 || importOrdersPerCustomer < 1 || importOrdersPerCustomer > 10 || (importCustomerCount * importOrdersPerCustomer > 500)}
+              className={cn(
+                "w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-2",
+                isImporting
+                  ? "bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed"
+                  : "bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-950/50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600"
+              )}
+            >
+              {isImporting ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin text-purple-400" />
+                  <span>Ingesting Data...</span>
+                </>
+              ) : (
+                <>
+                  <span>📥 Ingest Brand Data</span>
+                </>
+              )}
+            </button>
+          </div>
+          {importCustomerCount * importOrdersPerCustomer > 500 && (
+            <p className="text-[10px] text-rose-400 mt-2 font-mono">
+              ⚠️ Exceeds limit: Max 500 total orders per import (current: {importCustomerCount * importOrdersPerCustomer}).
+            </p>
+          )}
+        </div>
+      </section>
+      )}
+
       <MegaFooter />
       <AttributionBar />
 
@@ -2232,6 +2427,37 @@ export default function HomePage() {
           localStorage.setItem("aira_has_seen_welcome", "true");
         }}
       />
+
+      {/* Toast Notification Container in top right */}
+      {toast && (
+        <div className={cn(
+          "fixed top-6 right-6 z-[100] flex items-center gap-3 p-4 rounded-xl border backdrop-blur-md shadow-2xl transition-all duration-300 animate-fade-in max-w-sm",
+          toast.type === "success"
+            ? "bg-emerald-950/80 border-emerald-500/30 text-emerald-100"
+            : "bg-rose-950/80 border-rose-500/30 text-rose-100"
+        )}>
+          <div className={cn(
+            "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base flex-shrink-0",
+            toast.type === "success" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+          )}>
+            {toast.type === "success" ? "✓" : "✕"}
+          </div>
+          <div className="flex-1 min-w-0 pr-2">
+            <p className="text-xs font-semibold tracking-tight font-mono">
+              {toast.type === "success" ? "Import Successful" : "Import Failed"}
+            </p>
+            <p className="text-[11px] text-slate-300 font-sans mt-0.5 leading-relaxed">
+              {toast.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-white transition-colors text-xs font-bold leading-none p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       
     </div>
   );

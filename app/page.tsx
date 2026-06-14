@@ -1800,9 +1800,8 @@ export default function HomePage() {
         }}
       />
 
-<div id="app-console" className="relative z-10 max-w-5xl mx-auto px-4">
-      {/* Header Navbar */}
-      <header className="sticky top-0 z-50 -mx-4 px-4 flex items-center justify-between py-4 header-glass mb-2">
+      {/* Header Navbar — full viewport width, outside the constrained column */}
+      <header className="sticky top-0 z-50 w-full flex items-center justify-between py-3 px-6 header-glass mb-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] flex items-center justify-center shadow-lg shadow-red-950/50 flex-shrink-0 border border-red-400/20">
             <span className="text-white text-base">🍓</span>
@@ -1871,7 +1870,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      
+<div id="app-console" className="relative z-10 max-w-5xl mx-auto px-4">
 
   {/* ============================================================
       ONE PROMPT, FULL CAMPAIGN CORE HEADER + VIDEO LAYER

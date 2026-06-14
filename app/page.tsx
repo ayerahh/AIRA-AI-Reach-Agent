@@ -266,6 +266,13 @@ function MetricCard({
   );
 }
 
+const TONE_CONFIG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
+  friendly:      { color: "text-sky-400",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    dot: "bg-sky-400" },
+  urgent:        { color: "text-rose-400",   bg: "bg-rose-500/10",   border: "border-rose-500/20",   dot: "bg-rose-400" },
+  exclusive:     { color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20",  dot: "bg-amber-400" },
+  informational: { color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", dot: "bg-violet-400" },
+};
+
 function VariantCard({
   variant,
   isChosen,
@@ -276,67 +283,83 @@ function VariantCard({
   onSelect: () => void;
 }) {
   const ChannelIcon = CHANNEL_ICONS[variant.channel];
+  const tone = TONE_CONFIG[variant.tone] ?? TONE_CONFIG.informational;
 
   return (
     <button
       onClick={onSelect}
       className={cn(
-        "w-full text-left p-5 rounded-xl border transition-all duration-300 relative overflow-hidden group backdrop-blur-md",
+        "w-full text-left rounded-2xl border transition-all duration-300 relative overflow-hidden group",
         isChosen
-          ? "border-purple-500/50 bg-purple-950/20 shadow-lg shadow-purple-950/40 ring-1 ring-purple-500/30"
-          : "border-slate-800/80 bg-slate-950/40 hover:border-purple-500/30 hover:bg-slate-900/60 hover:shadow-2xl hover:-translate-y-0.5"
+          ? "border-purple-500/60 bg-gradient-to-b from-purple-950/30 to-slate-950/60 shadow-xl shadow-purple-950/40 ring-1 ring-purple-500/30"
+          : "border-slate-800/70 bg-slate-950/50 hover:border-slate-700/70 hover:bg-slate-900/60 hover:shadow-xl hover:-translate-y-0.5"
       )}
     >
-      {/* Dynamic light reflection line on hover */}
-      <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
+      {/* Tone accent bar at top */}
+      <div className={cn("h-0.5 w-full", isChosen ? "bg-gradient-to-r from-purple-500 via-violet-400 to-purple-500" : `bg-gradient-to-r from-transparent via-[${tone.dot}]/40 to-transparent`)} />
 
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
-          {isChosen ? (
-            <div className="w-5 h-5 rounded-full bg-purple-500/25 border border-purple-400 flex items-center justify-center">
-              <CheckCircle2 size={12} className="text-purple-300 flex-shrink-0" />
-            </div>
-          ) : (
-            <div className="w-5 h-5 rounded-full border border-slate-800 group-hover:border-purple-500/50 flex-shrink-0" />
-          )}
-          <span className="text-sm font-bold text-white tracking-tight">
-            {variant.label}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span
-            className={cn(
-              "text-[9px] px-2 py-0.5 rounded-full border uppercase tracking-wider font-mono",
-              CHANNEL_COLORS[variant.channel]
+      {/* Shimmer on hover */}
+      <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
+
+      <div className="p-5">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            {isChosen ? (
+              <div className="w-5 h-5 rounded-full bg-purple-500/30 border border-purple-400/80 flex items-center justify-center flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                <CheckCircle2 size={11} className="text-purple-300" />
+              </div>
+            ) : (
+              <div className="w-5 h-5 rounded-full border-2 border-slate-700 group-hover:border-purple-500/60 flex-shrink-0 transition-colors" />
             )}
-          >
-            <ChannelIcon size={9} className="inline mr-1 -mt-0.5" />
-            {variant.channel}
-          </span>
-          <span className="text-xs text-emerald-400 font-mono font-bold">
-            {formatPct(variant.predictedCtr)} Predicted CTR
+            <div>
+              <span className="text-sm font-bold text-white tracking-tight block">{variant.label}</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", tone.dot)} />
+                <span className={cn("text-[10px] font-mono uppercase tracking-wider", tone.color)}>{variant.tone}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span className={cn("text-[9px] px-2 py-0.5 rounded-full border uppercase tracking-wider font-mono flex items-center gap-1", CHANNEL_COLORS[variant.channel])}>
+              <ChannelIcon size={9} />
+              {variant.channel}
+            </span>
+            <span className="text-[11px] text-emerald-400 font-mono font-bold tabular-nums">
+              {formatPct(variant.predictedCtr)} CTR
+            </span>
+          </div>
+        </div>
+
+        {/* Subject line */}
+        {variant.subject && (
+          <div className={cn("text-[11px] font-mono px-3 py-2 rounded-lg mb-3 border flex gap-1.5 items-start", tone.bg, tone.border)}>
+            <span className="text-slate-500 flex-shrink-0 mt-px">Subject:</span>
+            <span className={cn("font-semibold leading-snug", tone.color)}>{variant.subject}</span>
+          </div>
+        )}
+
+        {/* Body preview */}
+        <p className="text-xs text-slate-300 leading-relaxed line-clamp-4 font-sans">
+          {variant.body}
+        </p>
+
+        {/* Footer */}
+        <div className="mt-4 pt-3 border-t border-slate-800/50 flex items-center justify-between">
+          {isChosen ? (
+            <span className="text-[10px] text-purple-400 font-mono font-bold flex items-center gap-1.5">
+              <CheckCircle2 size={11} />
+              Selected variant
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-600 font-mono group-hover:text-slate-400 transition-colors">
+              Click to select
+            </span>
+          )}
+          <span className={cn("text-[10px] font-mono px-2 py-0.5 rounded border", tone.bg, tone.border, tone.color)}>
+            {variant.predictedCtr >= 0.1 ? "Top Pick" : variant.predictedCtr >= 0.08 ? "Strong" : "Solid"}
           </span>
         </div>
-      </div>
-
-      {variant.subject && (
-        <div className="text-xs text-text-muted mb-2 font-mono flex gap-1">
-          <span>Subject:</span>
-          <span className="text-indigo-300 font-medium truncate">{variant.subject}</span>
-        </div>
-      )}
-
-      <p className="text-xs text-slate-300 leading-relaxed line-clamp-3 font-sans">
-        {variant.body}
-      </p>
-
-      <div className="mt-4 pt-3 border-t border-slate-900/60 flex items-center justify-between">
-        <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
-          Tone: <span className="text-slate-300 font-bold">{variant.tone}</span>
-        </span>
-        <span className="text-[9px] text-purple-400/80 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-          Click to select this variant ➔
-        </span>
       </div>
     </button>
   );
@@ -2501,18 +2524,24 @@ export default function HomePage() {
         </button>
 
         {/* Campaign History Trigger */}
-        {pastCampaigns.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-l-xl border border-r-0 border-emerald-800/60 bg-emerald-950/40 font-mono text-xs text-emerald-300 hover:text-white transition-all hover:bg-emerald-900/40 shadow-2xl group"
-            title="View all past campaigns"
-          >
-            <BarChart3 size={14} className="text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline font-bold">Campaign History</span>
-            <span className="text-[10px] bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 rounded-full px-1.5 font-bold">{pastCampaigns.length}</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+          className={cn(
+            "flex items-center gap-2 px-3 py-2.5 rounded-l-xl border border-r-0 font-mono text-xs transition-all shadow-2xl group",
+            pastCampaigns.length > 0
+              ? "border-emerald-800/60 bg-emerald-950/40 text-emerald-300 hover:text-white hover:bg-emerald-900/40"
+              : "border-slate-800/40 bg-slate-950/30 text-slate-600 hover:text-slate-400 hover:bg-slate-900/40"
+          )}
+          title="View all past campaigns"
+        >
+          <BarChart3 size={14} className={cn("group-hover:scale-110 transition-transform", pastCampaigns.length > 0 ? "text-emerald-400" : "text-slate-600")} />
+          <span className="hidden sm:inline font-bold">Campaign History</span>
+          {pastCampaigns.length > 0
+            ? <span className="text-[10px] bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 rounded-full px-1.5 font-bold">{pastCampaigns.length}</span>
+            : <span className="text-[10px] text-slate-700 font-mono">0</span>
+          }
+        </button>
 
       </div>
 

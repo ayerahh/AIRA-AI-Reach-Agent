@@ -359,8 +359,7 @@ Segment Profile (${customers.length} customers):
 - Cities: ${topCities}
 - Avg lifetime spend: ₹${avgSpend.toLocaleString("en-IN")}
 - Avg orders per customer: ${avgOrders}
-- Dominant persona: ${topPersona.replace(/-/g, " ")}
-- Sample names: ${customers.slice(0, 3).map(c => c.name).join(", ")}`;
+- Dominant persona: ${topPersona.replace(/-/g, " ")}`;
 }
 
 async function generateVariantsWithAI(
@@ -375,10 +374,12 @@ ${customerSummary}
 Channel: ${channel.toUpperCase()} | Intent: ${intent}
 
 Rules:
-- Always open with "Hi {{first_name}},"
+- ALWAYS open with exactly "Hi {{first_name}}," — never substitute a real name, never use "Hi Sneha," or any other name
+- Use {{first_name}} as the ONLY placeholder for the recipient's name throughout the message
 - Reference specific data from the segment profile above (tier, city, spend level, persona) to make copy feel data-driven, not generic
-- Keep SMS/Push under 160 chars; email can be longer
-- For ${channel === "email" ? "email, include a subject line" : channel + ", leave subject empty"}
+- Keep SMS/Push under 160 chars; email can be longer with 2-4 short paragraphs
+- For ${channel === "email" ? "email, include a compelling subject line" : channel + ", leave subject empty"}
+- Make each variant meaningfully different in tone, hook, and CTA — not just word-swaps
 
 Return ONLY valid JSON:
 {
@@ -388,12 +389,20 @@ Return ONLY valid JSON:
     { "label": "Brand Focus", "subject": "", "body": "...", "tone": "informational" }
   ]
 }`;
-  
+
   const result = await callGroqLLM<GroqVariantsResponse>(prompt);
   if (!Array.isArray(result.variants) || result.variants.length === 0) {
     throw new Error("Groq returned no message variants");
   }
-  return result.variants;
+
+  // Sanitize: replace any real first names the LLM may have injected with {{first_name}}
+  return result.variants.map((v) => ({
+    ...v,
+    body: v.body.replace(/\bHi\s+(?!{{first_name}})([A-Z][a-z]+),/g, "Hi {{first_name}},"),
+    subject: v.subject
+      ? v.subject.replace(/\b([A-Z][a-z]+),\s/g, "{{first_name}}, ")
+      : v.subject,
+  }));
 }
 
 async function generateReasoningWithAI(

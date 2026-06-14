@@ -85,3 +85,26 @@ export function getCommunicationsByCampaign(
     (c) => c.campaignId === campaignId
   );
 }
+
+export function getCommunicationById(id: string): Communication | undefined {
+  return getOrCreateStore().communications.find((c) => c.id === id);
+}
+
+export function updateCommunicationStatus(
+  id: string,
+  status: Communication["status"],
+  meta: { timestamp?: string; failureReason?: string } = {}
+): void {
+  const store = getOrCreateStore();
+  const idx = store.communications.findIndex((c) => c.id === id);
+  if (idx < 0) return;
+  const comm = store.communications[idx];
+  store.communications[idx] = {
+    ...comm,
+    status,
+    ...(status === "delivered" ? { deliveredAt: meta.timestamp } : {}),
+    ...(status === "opened" ? { openedAt: meta.timestamp } : {}),
+    ...(status === "clicked" ? { clickedAt: meta.timestamp } : {}),
+    ...(meta.failureReason ? { failureReason: meta.failureReason } : {}),
+  };
+}

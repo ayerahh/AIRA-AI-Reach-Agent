@@ -1,5 +1,45 @@
 import type { MessageVariant } from './types';
 
+export interface ChannelMessage {
+  id: string;
+  campaignId: string;
+  customerId: string;
+  channel: string;
+  body: string;
+}
+
+export interface DispatchResult {
+  accepted: number;
+  jobId: string;
+  message: string;
+}
+
+/**
+ * Calls the external channel service with a batch of messages.
+ * Returns 202 Accepted immediately — status callbacks arrive later at /api/receipts.
+ */
+export async function callChannelService(
+  messages: ChannelMessage[],
+  campaignId: string,
+): Promise<DispatchResult> {
+  const serviceUrl = process.env.CHANNEL_SERVICE_URL || 'http://localhost:3001';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000';
+  const crmReceiptUrl = `${appUrl}/api/receipts`;
+
+  const res = await fetch(`${serviceUrl}/dispatch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ campaignId, crmReceiptUrl, messages }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Channel service returned ${res.status}`);
+  }
+
+  return res.json() as Promise<DispatchResult>;
+}
+
+/** @deprecated Use callChannelService for real dispatch */
 export async function dispatchCampaign(
   channel: string,
   variant: MessageVariant,

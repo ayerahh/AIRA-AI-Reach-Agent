@@ -227,3 +227,85 @@
   box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
 }
 
+/* ── Elite card styles ──────────────────────────────────── */
+.card-elite {
+  background: linear-gradient(to bottom, rgba(15,23,42,0.7), rgba(2,6,23,0.9));
+  border: 1px solid rgba(51,65,85,0.6);
+  backdrop-filter: blur(12px);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.card-elite:hover {
+  border-color: rgba(99,102,241,0.3);
+  box-shadow: 0 0 24px rgba(99,102,241,0.08);
+}
+
+/* Section top-rule glow */
+.section-rule {
+  position: relative;
+}
+.section-rule::before {
+  content: "";
+  display: block;
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(to right, transparent, rgba(139,92,246,0.3), transparent);
+  margin-bottom: 1.5rem;
+}
+
+/* Scan-line shimmer on pipeline cards */
+@keyframes scanLine {
+  0%   { top: -2px; opacity: 0; }
+  10%  { opacity: 0.4; }
+  90%  { opacity: 0.4; }
+  100% { top: 102%; opacity: 0; }
+}
+.scan-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(99,102,241,0.5), transparent);
+  animation: scanLine 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Header glass sticky */
+.header-glass {
+  background: rgba(2,6,23,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(30,41,59,0.8);
+}
+
+/* Glow dot pulse (stronger) */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 4px currentColor; }
+  50%       { box-shadow: 0 0 12px currentColor; }
+}
+.glow-dot { animation: glowPulse 2s ease-in-out infinite; }
+
+/* Smooth number transition */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-count { animation: countUp 0.35s ease-out forwards; }
+
+/* Gentle nudge bounce — prompts users to click functional buttons */
+@keyframes nudgeBounce {
+  0%, 100% { transform: translateY(0); }
+  30%       { transform: translateY(-4px); }
+  60%       { transform: translateY(-2px); }
+  80%       { transform: translateY(-3px); }
+}
+.btn-nudge {
+  animation: nudgeBounce 2.4s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+.btn-nudge:hover,
+.btn-nudge:focus,
+.btn-nudge:active,
+.btn-nudge:disabled {
+  animation: none;
+}
+

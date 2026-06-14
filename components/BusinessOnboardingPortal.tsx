@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Upload, 
   FileText, 
@@ -16,9 +16,13 @@ import {
   ShoppingBag, 
   Users, 
   ArrowRight,
-  Info
+  Info,
+  Coffee,
+  Heart,
+  Dumbbell,
+  Lock
 } from "lucide-react";
-import { formatINR } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import seasonalEvents from "@/lib/seasonalEvents.json";
 import { DEMO_DATASETS } from "@/lib/demoDatasets";
 
@@ -42,18 +46,37 @@ interface Opportunity {
 }
 
 interface BusinessOnboardingPortalProps {
+  importResult?: any;
   onImportSuccess?: (result: any) => void;
+  onPastedTextChange?: (text: string) => void;
 }
 
-export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOnboardingPortalProps = {}) {
+const scrollToSpotlight = () => {
+  setTimeout(() => {
+    const el = document.getElementById("intelligence-report");
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 24;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  }, 400);
+};
+
+export default function BusinessOnboardingPortal({ importResult: importResultProp, onImportSuccess, onPastedTextChange }: BusinessOnboardingPortalProps = {}) {
   const [activeTab, setActiveTab] = useState<"upload" | "paste" | "generate">("paste");
-  
+
   // IMPROVEMENT TWO: Lifted brand state up to sync Card 1 and Card 3
   const [selectedBrand, setSelectedBrand] = useState<"beauty-brand" | "fitness-brand">("beauty-brand");
   
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<IngestResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync local importResult state with parent importResult prop if provided
+  useEffect(() => {
+    if (importResultProp !== undefined) {
+      setImportResult(importResultProp);
+    }
+  }, [importResultProp]);
 
   // Form states for Upload and Paste simulation
   const [simulatedCustCount, setSimulatedCustCount] = useState<number>(60);
@@ -65,6 +88,35 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
   // Card 3: Opportunities telemetry
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoadingOpps, setIsLoadingOpps] = useState(false);
+
+  // Load initial importResult from localStorage if present
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("aira_import_result");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setImportResult(parsed);
+          if (onImportSuccess) {
+            onImportSuccess(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to parse saved import result in portal", e);
+        }
+      }
+    }
+  }, [onImportSuccess]);
+
+  // Persist importResult to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (importResult) {
+        localStorage.setItem("aira_import_result", JSON.stringify(importResult));
+      } else {
+        localStorage.removeItem("aira_import_result");
+      }
+    }
+  }, [importResult]);
 
   // Determine season from a date string dynamically
   const getSeasonFromDate = (dateStr: string | undefined) => {
@@ -109,7 +161,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
   };
 
   // Fetch opportunities whenever the brand changes
-  const fetchOpportunities = async (brand: string) => {
+  const fetchOpportunities = useCallback(async (brand: string) => {
     setIsLoadingOpps(true);
     try {
       const brandParam = brand === "beauty-brand" ? "beauty" : "fitness";
@@ -123,11 +175,11 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
     } finally {
       setIsLoadingOpps(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOpportunities(selectedBrand);
-  }, [selectedBrand]);
+  }, [selectedBrand, fetchOpportunities]);
 
   const handleDemoGenerate = async (type: "beauty-brand" | "fitness-brand") => {
     setSelectedBrand(type);
@@ -154,6 +206,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
         fetchOpportunities(type);
         if (onImportSuccess) {
           onImportSuccess(data);
+          scrollToSpotlight();
         }
       } else {
         setErrorMessage(data.error || "Failed to generate demo business data.");
@@ -175,6 +228,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
     setErrorMessage(null);
     setImportResult(null);
 
+    let pasteCustomerArray: any[] = [];
     try {
       let response;
       if (activeTab === "paste") {
@@ -187,11 +241,10 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
           return;
         }
 
-        let customerArray: any[] = [];
         if (Array.isArray(parsed)) {
-          customerArray = parsed;
+          pasteCustomerArray = parsed;
         } else if (parsed && Array.isArray(parsed.customers)) {
-          customerArray = parsed.customers;
+          pasteCustomerArray = parsed.customers;
         } else {
           setErrorMessage("Invalid format. Expected a JSON array of customers or a dataset object containing a 'customers' array.");
           setIsImporting(false);
@@ -199,8 +252,8 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
         }
 
         // Validate each customer has name, email, totalSpend, orderCount
-        for (let idx = 0; idx < customerArray.length; idx++) {
-          const rawCust = customerArray[idx];
+        for (let idx = 0; idx < pasteCustomerArray.length; idx++) {
+          const rawCust = pasteCustomerArray[idx];
           if (!rawCust.name || !rawCust.email || rawCust.totalSpend === undefined || rawCust.orderCount === undefined) {
             setErrorMessage(`Validation error at index ${idx}: Each customer must have name, email, totalSpend, and orderCount.`);
             setIsImporting(false);
@@ -215,7 +268,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
           },
           body: JSON.stringify({
             source: "paste",
-            customers: customerArray,
+            customers: pasteCustomerArray,
           }),
         });
       } else {
@@ -234,12 +287,19 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
 
       const data = await response.json();
       if (response.ok && data.success) {
-        setImportResult(data);
+        // For paste tab: force importedCustomers to the source array so duplicates
+        // (e.g. after server restart) don't leave the pipeline with an empty customer list
+        const enriched =
+          activeTab === "paste" && pasteCustomerArray.length > 0
+            ? { ...data, importedCustomers: pasteCustomerArray }
+            : data;
+        setImportResult(enriched);
         if (activeTab !== "paste") {
           fetchOpportunities(selectedBrand);
         }
         if (onImportSuccess) {
-          onImportSuccess(data);
+          onImportSuccess(enriched);
+          scrollToSpotlight();
         }
       } else {
         setErrorMessage(data.error || "Failed to complete simulated data ingestion.");
@@ -282,6 +342,10 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
         setImportResult(resultData);
         if (onImportSuccess) {
           onImportSuccess(resultData);
+          scrollToSpotlight();
+        }
+        if (onPastedTextChange) {
+          onPastedTextChange(JSON.stringify(ds, null, 2));
         }
       } else {
         setErrorMessage(data.error || "Failed to import demo dataset.");
@@ -535,7 +599,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
     const totalPotentialRevenue = Math.round(totalSpendSum * 0.15);
 
     return (
-      <div className="mt-8 space-y-6 animate-fade-in border-t border-slate-900 pt-8">
+      <div id="intelligence-report" className="mt-8 space-y-6 animate-fade-in border-t border-slate-900 pt-8">
         
         {/* Business Summary Banner */}
         <div className="bg-gradient-to-r from-purple-900/30 via-indigo-950/40 to-slate-950/60 border border-purple-500/30 rounded-xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] flex items-center justify-between gap-4">
@@ -552,12 +616,15 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
           </div>
           <button
             onClick={() => {
-              window.location.reload();
+              setImportResult(null);
+              if (onImportSuccess) {
+                onImportSuccess(null);
+              }
             }}
-            className="hidden md:flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-mono px-3.5 py-2 rounded-lg transition-all"
+            className="hidden md:flex items-center gap-1.5 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-500/20 text-[10px] text-rose-300 font-mono px-3.5 py-2 rounded-lg transition-all"
           >
-            <span>Sync Dashboard</span>
-            <ArrowRight size={11} />
+            <span>Reset CRM Engine</span>
+            <RefreshCw size={11} className="text-rose-400" />
           </button>
         </div>
 
@@ -568,7 +635,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
           <div className="border border-slate-900 bg-slate-950/40 rounded-xl p-5 hover:border-purple-500/20 hover:shadow-[0_0_15px_rgba(168,85,247,0.05)] transition-all">
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-900">
               <ShoppingBag size={14} className="text-purple-400" />
-              <h4 className="text-xs font-bold font-mono text-slate-300 uppercase">Onboarded Business Summary</h4>
+              <h4 className="text-xs font-bold font-mono text-slate-300 uppercase">Business Summary</h4>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -589,7 +656,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
               </div>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-900 text-[9px] text-slate-500 font-mono leading-relaxed">
-              <strong>Business Insight:</strong> Generated sales records verify a customer LTV of {formatINR(Math.round(avgSpend))} per shopper. 
+              <strong>Insight:</strong> Average customer lifetime value across this dataset is {formatINR(Math.round(avgSpend))}.
             </div>
           </div>
 
@@ -597,7 +664,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
           <div className="border border-slate-900 bg-slate-950/40 rounded-xl p-5 hover:border-purple-500/20 hover:shadow-[0_0_15px_rgba(168,85,247,0.05)] transition-all">
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-900">
               <Users size={14} className="text-purple-400" />
-              <h4 className="text-xs font-bold font-mono text-slate-300 uppercase">Customer DNA Profiling</h4>
+              <h4 className="text-xs font-bold font-mono text-slate-300 uppercase">Customer Intelligence</h4>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -618,7 +685,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
               </div>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-900 text-[9px] text-slate-500 font-mono leading-relaxed">
-              <strong>Action Strategy:</strong> Target `{topPersona}` cohorts via `{responsiveChannel}` to optimize conversion lift.
+              <strong>Recommendation:</strong> Prioritise <span className="text-slate-300">{topPersona}</span> cohorts via <span className="text-slate-300">{responsiveChannel}</span> for the highest conversion lift.
             </div>
           </div>
 
@@ -765,19 +832,23 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
   };
 
   return (
-    <section className="mb-12 border border-slate-800/80 rounded-2xl bg-slate-950/40 backdrop-blur-md p-6 select-none shadow-[0_4px_30px_rgba(0,0,0,0.4)] animate-slide-up">
+    <section className="mb-12 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/80 backdrop-blur-md select-none shadow-[0_4px_40px_rgba(0,0,0,0.5)] animate-slide-up overflow-hidden border border-slate-800/60">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+      <div className="p-6">
       
       {/* Title block */}
-      <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-slate-900">
-        <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-          <Upload size={15} className="text-purple-400" />
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-900/80">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+            <Upload size={15} className="text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">Import Customers</h2>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">AIRA uses this data to segment, score, and target your campaign</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">AI Business Onboarding Portal</h2>
-          <p className="text-[10px] text-slate-500 font-mono mt-0.5">// STATISTIC INGESTION TUNNEL AND CAMPAIGN OPPORTUNITY DECK</p>
-        </div>
+        <span className="text-[9px] font-mono text-slate-600 hidden sm:block">Step 1 of 2</span>
       </div>
-
 
       {/* Tabs list */}
       <div className="flex border-b border-slate-900 mb-6 bg-slate-950/30 p-1 rounded-xl border border-slate-900">
@@ -810,11 +881,18 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
           Paste Data
         </button>
         <button
-          disabled={true}
-          className="flex-1 py-2.5 text-xs font-mono font-semibold rounded-lg flex items-center justify-center gap-2 text-slate-600 cursor-not-allowed opacity-45 select-none font-sans"
+          onClick={() => {
+            setActiveTab("generate");
+            setErrorMessage(null);
+          }}
+          className={`flex-1 py-2.5 text-xs font-mono font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            activeTab === "generate" 
+              ? "bg-purple-600/15 border border-purple-500/30 text-purple-400 font-bold" 
+              : "text-slate-500 hover:text-slate-300"
+          }`}
         >
           <Sparkles size={13} />
-          Generate Demo (Locked)
+          Generate Demo
         </button>
       </div>
 
@@ -869,7 +947,8 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
                     disabled={true}
                     className="bg-slate-800 text-slate-500 border border-slate-800/80 font-semibold text-xs px-5 py-2.5 rounded-lg cursor-not-allowed flex items-center justify-center gap-1.5 font-sans"
                   >
-                    <span>🔒 Upload Locked</span>
+                    <Lock size={12} className="text-slate-500" />
+                    <span>Upload Locked</span>
                   </button>
                 </div>
               </div>
@@ -883,72 +962,102 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
             
             {/* Left Column: Demo datasets */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-slate-400 font-sans leading-relaxed">
-                Wanna test the tool but lazy to find/obtain data? No worries. Use any of these 3:
-              </p>
+              <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-950/10 shadow-lg mb-2 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-purple-400 uppercase tracking-wider mb-1.5 font-mono">
+                  <Sparkles size={13} className="animate-pulse" />
+                  <span>Quick Start</span>
+                </div>
+                <p className="text-xs font-medium text-slate-300 font-sans leading-relaxed">
+                  No data? Pick one of the sample datasets below — each has realistic customers, spending patterns, and channel preferences pre-loaded.
+                </p>
+              </div>
               <div className="space-y-2.5">
-                {DEMO_DATASETS.map((ds, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => handleSelectDemoDataset(ds)}
-                    className="w-full text-left p-3.5 bg-zinc-900/30 hover:bg-zinc-900/70 border border-zinc-800 hover:border-purple-500/40 rounded-xl transition-all group flex flex-col gap-1 cursor-pointer select-none"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-white font-mono group-hover:text-purple-400 transition-colors">
-                        {ds.dataset}
+                {DEMO_DATASETS.map((ds, idx) => {
+                  const isChai = ds.dataset.includes("CHAI");
+                  const isPet = ds.dataset.includes("PET") || ds.dataset.includes("PAW") || ds.theme.toLowerCase().includes("pet");
+                  const accentClass = isChai 
+                    ? "border-amber-500/20 bg-gradient-to-br from-slate-950/40 via-amber-950/10 to-amber-900/5 hover:border-amber-400/40 hover:shadow-[0_0_15px_rgba(245,158,11,0.08)]" 
+                    : isPet 
+                    ? "border-cyan-500/20 bg-gradient-to-br from-slate-950/40 via-cyan-950/10 to-cyan-900/5 hover:border-cyan-400/40 hover:shadow-[0_0_15px_rgba(6,182,212,0.08)]" 
+                    : "border-emerald-500/20 bg-gradient-to-br from-slate-950/40 via-emerald-950/10 to-emerald-900/5 hover:border-emerald-400/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.08)]";
+                  const textAccent = isChai ? "text-amber-400" : isPet ? "text-cyan-400" : "text-emerald-400";
+                  const Icon = isChai ? Coffee : isPet ? Heart : Dumbbell;
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => handleSelectDemoDataset(ds)}
+                      className={cn(
+                        "w-full text-left p-4 border rounded-xl transition-all duration-300 group flex flex-col gap-2 cursor-pointer select-none",
+                        accentClass
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-white font-mono group-hover:text-purple-400 transition-colors">
+                          {ds.dataset}
+                        </span>
+                        <span className={cn("text-[9px] font-mono px-2 py-0.5 rounded border uppercase tracking-wide font-bold flex items-center gap-1.5", textAccent, isChai ? "border-amber-950 bg-amber-950/30" : isPet ? "border-cyan-950 bg-cyan-950/30" : "border-emerald-950 bg-emerald-950/30")}>
+                          <Icon size={10} />
+                          <span>{isChai ? "Coffee" : isPet ? "Pets" : "Gym"}</span>
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-300 font-sans font-medium">
+                        {ds.theme}
                       </span>
-                      <span className="text-[8px] font-mono bg-purple-950/40 text-purple-400 border border-purple-900/30 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
-                        {ds.dataset.includes("CHAI") ? "☕ Coffee" : ds.dataset.includes("PET") ? "🐾 Pets" : "💪 Gym"}
+                      <span className="text-[9px] text-slate-500 font-mono leading-normal block group-hover:text-slate-400 transition-colors border-t border-slate-900/60 pt-1.5 mt-1">
+                        {ds.desc}
                       </span>
                     </div>
-                    <span className="text-[9.5px] text-slate-400 font-sans font-medium">
-                      {ds.theme}
-                    </span>
-                    <span className="text-[8.5px] text-slate-500 font-mono mt-0.5 leading-normal block group-hover:text-slate-400 transition-colors">
-                      {ds.desc}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Right Column: Textarea & Ingest Action */}
             <div className="lg:col-span-2 space-y-4">
-              <textarea
-                value={pastedText}
-                onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Paste customer JSON array, CRM export, or business summary here."
-                className="w-full min-h-[180px] bg-slate-900/40 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/10 resize-none transition-all"
-              />
+              <div className="relative w-full">
+                <textarea
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  onBlur={() => {
+                    if (onPastedTextChange) {
+                      onPastedTextChange(pastedText);
+                    }
+                  }}
+                  placeholder=""
+                  className="w-full min-h-[180px] bg-slate-900/40 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-200 outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/10 resize-none transition-all relative z-10"
+                />
+                {!pastedText && (
+                  <div className="absolute inset-0 p-4 text-xs font-mono select-none pointer-events-none z-0 text-slate-500/60 leading-normal">
+                    <span className="text-slate-500">[</span>
+                    <br />
+                    <span>  <span className="text-purple-400/80">"name"</span>: <span className="text-cyan-400/80">"Priya"</span>, <span className="text-purple-400/80">"email"</span>: <span className="text-cyan-400/80">"priya@example.com"</span>, <span className="text-purple-400/80">"totalSpend"</span>: <span className="text-amber-400/80">24500</span>, <span className="text-purple-400/80">"orderCount"</span>: <span className="text-amber-400/80">8</span> ... </span>
+                    <br />
+                    <span className="text-slate-500">]</span>
+                  </div>
+                )}
+              </div>
               
-              <div className="p-3 bg-slate-950/60 border border-slate-900 rounded-lg font-mono text-[9px] text-slate-500 space-y-1">
-                <div className="font-bold text-slate-400 uppercase tracking-wider text-[8.5px]">Example input format:</div>
-                <pre className="overflow-x-auto select-text">
-                  {`[
-  { "name": "Priya", "email": "priya102@example.com", "totalSpend": 24500, "orderCount": 8 },
-  { "name": "Amit", "email": "amit940@example.com", "totalSpend": 8500, "orderCount": 2 }
+              {/* Example format + action row */}
+              <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 overflow-hidden">
+                <div className="px-3 py-2 border-b border-slate-800/60 flex items-center justify-between">
+                  <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest">Expected format</span>
+                  <span className="text-[9px] font-mono text-slate-600">name · email · totalSpend · orderCount</span>
+                </div>
+                <pre className="px-3 py-2.5 text-[10px] font-mono text-slate-400 overflow-x-auto select-text leading-relaxed">
+{`[
+  { "name": "Priya", "email": "priya@example.com", "totalSpend": 24500, "orderCount": 8 },
+  { "name": "Amit",  "email": "amit@example.com",  "totalSpend": 8500,  "orderCount": 2 }
 ]`}
                 </pre>
-              </div>
-
-              <div className="flex justify-between items-center gap-4">
-                <span className="text-[10px] text-slate-500 font-mono">Input parser maps name, email, RFM fields.</span>
-                <div className="flex gap-3">
-                  <select
-                    value={selectedBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-300 outline-none focus:border-purple-500/50 font-sans"
-                  >
-                    <option value="beauty-brand">Beauty Mapped</option>
-                    <option value="fitness-brand">Fitness Mapped</option>
-                  </select>
+                <div className="px-3 py-2.5 border-t border-slate-800/60 flex items-center justify-between gap-3">
+                  <span className="text-[10px] text-slate-600 font-mono">Other fields are passed through as-is.</span>
                   <button
                     onClick={handleSimulatedIngest}
                     disabled={isImporting || !pastedText.trim()}
-                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition-all flex items-center justify-center font-sans"
+                    className="btn-nudge bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs px-5 py-2 rounded-lg transition-all flex items-center gap-2 font-mono uppercase tracking-wide shadow-[0_0_12px_rgba(139,92,246,0.25)] hover:shadow-[0_0_18px_rgba(139,92,246,0.4)] flex-shrink-0"
                   >
-                    {isImporting && <RefreshCw className="animate-spin w-4 h-4 mr-2" />}
-                    <span>Ingest Mapped CRM Data</span>
+                    {isImporting ? <RefreshCw className="animate-spin w-3 h-3" /> : null}
+                    <span>Ingest Data</span>
                   </button>
                 </div>
               </div>
@@ -971,20 +1080,24 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
 
             <div className="flex justify-center gap-4">
               <button
+                type="button"
                 onClick={() => handleDemoGenerate("beauty-brand")}
                 disabled={isImporting}
-                className="px-6 py-3 border border-purple-500/30 hover:border-purple-500/50 bg-slate-950/40 hover:bg-slate-900 rounded-xl text-xs font-semibold font-mono text-slate-200 tracking-wide transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-nudge px-6 py-3 border border-purple-600/40 hover:border-purple-500/70 bg-purple-950/20 hover:bg-purple-950/40 rounded-xl text-xs font-semibold font-mono text-purple-300 hover:text-white tracking-wide transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isImporting && selectedBrand === "beauty-brand" && <RefreshCw className="animate-spin w-4 h-4 mr-1" />}
-                💄 Velour (Fashion)
+                <ShoppingBag size={13} />
+                <span>Velour (Fashion)</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleDemoGenerate("fitness-brand")}
                 disabled={isImporting}
-                className="px-6 py-3 border border-purple-500/30 hover:border-purple-500/50 bg-slate-950/40 hover:bg-slate-900 rounded-xl text-xs font-semibold font-mono text-slate-200 tracking-wide transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-nudge px-6 py-3 border border-purple-600/40 hover:border-purple-500/70 bg-purple-950/20 hover:bg-purple-950/40 rounded-xl text-xs font-semibold font-mono text-purple-300 hover:text-white tracking-wide transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isImporting && selectedBrand === "fitness-brand" && <RefreshCw className="animate-spin w-4 h-4 mr-1" />}
-                💪 FitFuel (Fitness)
+                <Dumbbell size={13} />
+                <span>FitFuel (Fitness)</span>
               </button>
             </div>
           </div>
@@ -1003,6 +1116,7 @@ export default function BusinessOnboardingPortal({ onImportSuccess }: BusinessOn
       {/* POST INGESTION EXPERIENCE: AI Intelligence Report */}
       {renderIntelligenceReport()}
 
+      </div>
     </section>
   );
 }

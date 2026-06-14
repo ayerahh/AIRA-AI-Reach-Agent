@@ -1,4 +1,3 @@
-const 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 = process.env.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;
 /**
  * AIRA Agent Service — lib/agent.ts
  * INTEGRATED WITH REAL GROQ LLM (Llama 3.3 70B)
@@ -331,28 +330,62 @@ async function callGroqLLM<T>(prompt: string): Promise<T> {
   }
 }
 
+function buildCustomerSummary(customers: Customer[]): string {
+  if (customers.length === 0) return "";
+
+  const tierCounts = customers.reduce<Record<string, number>>((acc, c) => {
+    acc[c.tier] = (acc[c.tier] || 0) + 1;
+    return acc;
+  }, {});
+  const tierStr = Object.entries(tierCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([t, n]) => `${n} ${t}`)
+    .join(", ");
+
+  const topCities = [...new Set(customers.map(c => c.city))].slice(0, 4).join(", ");
+  const avgSpend = Math.round(customers.reduce((s, c) => s + c.totalSpend, 0) / customers.length);
+  const avgOrders = Math.round(customers.reduce((s, c) => s + c.orderCount, 0) / customers.length);
+  const topPersona = Object.entries(
+    customers.reduce<Record<string, number>>((acc, c) => {
+      const p = c.tags?.[0] || "regular";
+      acc[p] = (acc[p] || 0) + 1;
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "mixed";
+
+  return `
+Segment Profile (${customers.length} customers):
+- Tier breakdown: ${tierStr}
+- Cities: ${topCities}
+- Avg lifetime spend: ₹${avgSpend.toLocaleString("en-IN")}
+- Avg orders per customer: ${avgOrders}
+- Dominant persona: ${topPersona.replace(/-/g, " ")}
+- Sample names: ${customers.slice(0, 3).map(c => c.name).join(", ")}`;
+}
+
 async function generateVariantsWithAI(
   goalText: string,
   intent: CampaignIntent,
   channel: CampaignChannel,
-  segmentSize: number
+  segmentSize: number,
+  customerSummary: string
 ): Promise<GroqVariantPayload[]> {
-  const prompt = `You are an expert copywriter inside an AI-Native CRM dashboard.
-Your objective is to generate exactly 3 message variants based on the user's campaign goal: "${goalText}"
+  const prompt = `You are an expert CRM copywriter. Write 3 message variants for this campaign goal: "${goalText}"
+${customerSummary}
+Channel: ${channel.toUpperCase()} | Intent: ${intent}
 
-Target Channel Context: ${channel.toUpperCase()}
-Campaign Intent Class: ${intent}
-Target Segment Sizing: ${segmentSize} customers
+Rules:
+- Always open with "Hi {{first_name}},"
+- Reference specific data from the segment profile above (tier, city, spend level, persona) to make copy feel data-driven, not generic
+- Keep SMS/Push under 160 chars; email can be longer
+- For ${channel === "email" ? "email, include a subject line" : channel + ", leave subject empty"}
 
-Generate exactly 3 variants matching these specific labels: "Friendly Engagement", "Urgency Nudge", and "Brand Focus".
-Always include a proper greeting using the placeholder token string "{{first_name}}".
-
-Return ONLY a valid JSON object matching this structure:
+Return ONLY valid JSON:
 {
   "variants": [
-    { "label": "Friendly Engagement", "subject": "Catchy subject line or empty string if SMS/Push", "body": "Full personalized text block copy...", "tone": "friendly" },
-    { "label": "Urgency Nudge", "subject": "High urgency subject line or empty string if SMS/Push", "body": "Full personalized text block copy...", "tone": "urgent" },
-    { "label": "Brand Focus", "subject": "Value proposition subject line or empty string if SMS/Push", "body": "Full personalized text block copy...", "tone": "informational" }
+    { "label": "Friendly Engagement", "subject": "", "body": "...", "tone": "friendly" },
+    { "label": "Urgency Nudge", "subject": "", "body": "...", "tone": "urgent" },
+    { "label": "Brand Focus", "subject": "", "body": "...", "tone": "informational" }
   ]
 }`;
   
@@ -369,25 +402,25 @@ async function generateReasoningWithAI(
   channel: CampaignChannel,
   segmentSize: number,
   avgSpend: number,
-  avgEngagement: number
+  avgEngagement: number,
+  customerSummary: string
 ): Promise<GroqReasoningResponse> {
-  const prompt = `You are an AI-Native Customer Experience Analyst evaluating a campaign.
-Given the parameters:
-- Marketer Goal: "${goalText}"
-- Intent Type: ${intent}
-- Selected Channel: ${channel}
-- Cohort Size: ${segmentSize} users
-- Average Customer Lifetime Value: ₹${avgSpend}
-- Average Cohort Engagement Index: ${avgEngagement}/100
+  const prompt = `You are an AI campaign strategist. Analyze this campaign and return data-grounded reasoning.
 
-Compile a comprehensive strategic synthesis. Return ONLY a valid JSON object matching this structure:
+Marketer Goal: "${goalText}"
+${customerSummary}
+Selected Channel: ${channel} | Intent: ${intent} | Avg engagement: ${avgEngagement}/100
+
+Reference actual numbers from the segment profile in your reasoning — mention tiers, cities, spend levels.
+
+Return ONLY valid JSON:
 {
-  "goalSummary": "Summary explaining intent mapping and themes.",
-  "customerInsight": "Data observations regarding geography, spend density, and tier behavior.",
-  "segmentRationale": "Explain why this segment fits the objective.",
-  "channelRationale": "Explain why this channel outperforms alternatives for this specific segment.",
-  "riskFlags": ["Alert string if target size is narrow or context is risky"],
-  "confidence": 0.85
+  "goalSummary": "1-2 sentences: what goal maps to, which customers, expected outcome.",
+  "customerInsight": "Specific observations about this segment — mention tiers, cities, spend data.",
+  "segmentRationale": "Why these specific customers fit the intent, referencing actual attributes.",
+  "channelRationale": "Why ${channel} outperforms alternatives for this exact segment profile.",
+  "riskFlags": ["only include if genuinely risky: small size, low engagement, etc."],
+  "confidence": 0.87
 }`;
 
   return await callGroqLLM<GroqReasoningResponse>(prompt);
@@ -678,10 +711,12 @@ export async function runAgent(
   const avgTotalSpend = effectiveCustomers.length ? Math.round(effectiveCustomers.reduce((s, c) => s + c.totalSpend, 0) / effectiveCustomers.length) : 0;
   const avgEngagement = effectiveCustomers.length ? Math.round(effectiveCustomers.reduce((s, c) => s + c.engagementScore, 0) / effectiveCustomers.length) : 0;
 
+  const customerSummary = buildCustomerSummary(effectiveCustomers);
+
   // If key is present, execute Live Groq Upgrade
   if (GROQ_API_KEY) {
     try {
-      const aiVariants = await generateVariantsWithAI(goalText, parsed.intent, chosenChannel, effectiveCustomers.length);
+      const aiVariants = await generateVariantsWithAI(goalText, parsed.intent, chosenChannel, effectiveCustomers.length, customerSummary);
       variants = aiVariants.map((v, i): MessageVariant => ({
         id: makeId("var"),
         label: v.label,
@@ -692,7 +727,7 @@ export async function runAgent(
         predictedCtr: [0.088, 0.114, 0.062][i % 3],
       }));
 
-      reasoningBase = await generateReasoningWithAI(goalText, parsed.intent, chosenChannel, effectiveCustomers.length, avgTotalSpend, avgEngagement);
+      reasoningBase = await generateReasoningWithAI(goalText, parsed.intent, chosenChannel, effectiveCustomers.length, avgTotalSpend, avgEngagement, customerSummary);
     } catch (error) {
       console.error("Groq down, running original copy blocks fallback.", error);
     }

@@ -9,6 +9,8 @@ interface TelemetryDashboardProps {
   currentCampaign: Campaign | null;
   currentAnalytics: CampaignAnalytics | null;
   onRestoreSnapshot: (campaign: Campaign, analytics: CampaignAnalytics | null) => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
 }
 
 interface HistoryItem {
@@ -23,8 +25,9 @@ export default function TelemetryDashboard({
   currentCampaign,
   currentAnalytics,
   onRestoreSnapshot,
+  isOpen,
+  setIsOpen,
 }: TelemetryDashboardProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"history" | "json">("history");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
@@ -79,19 +82,6 @@ export default function TelemetryDashboard({
 
   return (
     <>
-      {/* Pinned Side Handle Trigger */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "fixed top-24 right-0 z-50 flex items-center gap-2 px-3 py-2.5 rounded-l-xl border border-r-0 border-slate-800 bg-slate-950 font-mono text-xs text-slate-400 hover:text-slate-200 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)] pointer-events-auto",
-          isOpen ? "transform -translate-x-[400px]" : "translate-x-0"
-        )}
-      >
-        <Terminal size={14} className={cn("text-indigo-400", isOpen && "animate-pulse")} />
-        <span className="hidden sm:inline font-semibold">Engine Console ({history.length})</span>
-        {isOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
-
       {/* Slide-out Sidebar Drawer */}
       <div className={cn(
         "fixed inset-y-0 right-0 z-40 w-full max-w-[400px] border-l border-slate-800/80 bg-slate-950/95 backdrop-blur-md shadow-[-10px_0_30px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out p-5 flex flex-col justify-between pointer-events-auto",
@@ -137,8 +127,19 @@ export default function TelemetryDashboard({
             {activeTab === "history" && (
               <div className="space-y-3">
                 <div className="bg-slate-900/20 border border-slate-900 p-3 rounded-xl font-mono">
-                  <h4 className="text-[11px] font-bold text-slate-300">⏱️ Time-Travel State Cache</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="text-[11px] font-bold text-slate-300">⏱️ Time-Travel State Cache</h4>
+                    {history.length > 0 && (
+                      <button 
+                        type="button"
+                        onClick={clearHistory}
+                        className="text-[9px] text-rose-400 hover:text-rose-300 hover:underline transition-colors uppercase tracking-wider font-bold"
+                      >
+                        Clear History
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
                     Click any cached prompt goal footprint below to instantly reload its exact audience filters, copy variants, and ROI parameters.
                   </p>
                 </div>

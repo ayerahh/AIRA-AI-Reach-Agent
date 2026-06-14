@@ -18,15 +18,17 @@ import {
   Mail,
   AlertTriangle,
   Award,
-  Phone
+  Phone,
+  TrendingUp
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
 interface TopCustomerSpotlightProps {
   importResult: any;
+  onCustomerChange?: (customer: any) => void;
 }
 
-export default function TopCustomerSpotlight({ importResult }: TopCustomerSpotlightProps) {
+export default function TopCustomerSpotlight({ importResult, onCustomerChange }: TopCustomerSpotlightProps) {
   const [mvpList, setMvpList] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -112,9 +114,15 @@ export default function TopCustomerSpotlight({ importResult }: TopCustomerSpotli
     setCurrentIndex(0);
   }, [importResult]);
 
-  if (mvpList.length === 0) return null;
+  const currentCustomer = mvpList[currentIndex] ?? null;
 
-  const currentCustomer = mvpList[currentIndex];
+  useEffect(() => {
+    if (onCustomerChange) {
+      onCustomerChange(currentCustomer);
+    }
+  }, [currentCustomer, onCustomerChange]);
+
+  if (mvpList.length === 0) return null;
 
   const handleCycleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % mvpList.length);
@@ -176,8 +184,9 @@ export default function TopCustomerSpotlight({ importResult }: TopCustomerSpotli
   const normalizedPersona = normalizePersonaName(rawPersona);
 
   return (
-    <section className="mb-12 border border-slate-800/80 hover:border-purple-500/30 rounded-2xl bg-slate-950/40 backdrop-blur-md p-6 select-none shadow-[0_4px_30px_rgba(0,0,0,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.05)] transition-all duration-300 animate-slide-up">
-      
+    <section data-tour="customer-spotlight" className="mb-12 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/80 backdrop-blur-md select-none shadow-[0_4px_40px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(168,85,247,0.08)] transition-all duration-300 animate-slide-up overflow-hidden border border-slate-800/60 hover:border-purple-500/20">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+      <div className="p-6">
       {/* Title */}
       <div className="flex items-center justify-between border-b border-slate-900 pb-4 mb-5">
         <div className="flex items-center gap-2.5">
@@ -186,7 +195,7 @@ export default function TopCustomerSpotlight({ importResult }: TopCustomerSpotli
           </div>
           <div>
             <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Top Customer Spotlight</h3>
-            <p className="text-[9px] text-slate-500 font-mono mt-0.5">// REAL-TIME RFM HIGHEST WEIGHTED VALUE SHOOTER</p>
+            <p className="text-[9px] text-slate-500 font-mono mt-0.5">Your highest-value customers, ranked by recency, purchase frequency, and total spend (RFM)</p>
           </div>
         </div>
         <span className="text-[9px] font-mono bg-purple-950/30 text-purple-400 border border-purple-900/30 px-2 py-0.5 rounded-md">
@@ -194,80 +203,130 @@ export default function TopCustomerSpotlight({ importResult }: TopCustomerSpotli
         </span>
       </div>
 
-      <div className="flex flex-col md:flex-row items-stretch gap-6">
+      <div className="flex flex-col lg:flex-row items-stretch gap-6">
         
-        {/* Left Card: Customer Identity details */}
-        <div className="flex-1 bg-slate-950/35 border border-slate-900 rounded-xl p-5 flex flex-col justify-between gap-4">
-          <div className="space-y-3">
+        {/* Left Column: VIP Card & Observation */}
+        <div className="flex-1 flex flex-col gap-4">
+          
+          {/* Futuristic VIP Card Visual */}
+          <div className="relative w-full h-44 rounded-2xl bg-gradient-to-br from-indigo-950/60 via-slate-900/90 to-purple-950/60 border border-purple-500/20 p-5 flex flex-col justify-between overflow-hidden shadow-2xl group hover:border-purple-400/40 hover:shadow-[0_0_25px_rgba(168,85,247,0.15)] transition-all duration-300 select-none">
+            {/* Ambient sliding light streak */}
+            <div className="absolute -inset-y-12 -left-12 w-12 bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 translate-x-[-100%] group-hover:translate-x-[400%] transition-transform duration-1000 ease-out" />
             
-            {/* Customer name and cycle button */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="text-base font-bold text-white font-sans">{currentCustomer.name}</span>
-                <span className={`text-[8px] font-mono px-2 py-0.5 rounded-full border ${churnRisk.style}`}>
-                  {churnRisk.label} Churn Risk
-                </span>
+            <div className="flex justify-between items-start relative z-10">
+              <div className="space-y-0.5 text-left">
+                <span className="text-[8px] font-mono text-purple-400 tracking-[0.25em] uppercase font-bold">AIRA VIP DOSSIER</span>
+                <h4 className="text-lg font-black text-white tracking-wide font-sans truncate max-w-[200px]">{currentCustomer.name}</h4>
+                <span className="text-[10px] font-mono text-slate-400 truncate max-w-[220px] block">{currentCustomer.email}</span>
               </div>
               
-              {/* Refresh / cycle button */}
-              <button
-                onClick={handleCycleNext}
-                title="Cycle to next top customer"
-                className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-850 hover:border-purple-500/40 text-slate-400 hover:text-purple-300 flex items-center justify-center transition-all cursor-pointer"
-              >
-                <RefreshCw size={12} className="hover:rotate-45 transition-transform duration-300" />
-              </button>
+              {/* Gold Chip Visual */}
+              <svg className="w-9 h-7 text-amber-500/80 opacity-80" viewBox="0 0 24 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="2" y="2" width="20" height="16" rx="3" fill="url(#chip-grad)" stroke="currentColor" />
+                <path d="M6 2v4M12 2v4M18 2v4M6 14v4M12 14v4M18 14v4M2 6h4M2 10h4M2 14h4M18 6h4M18 10h4M18 14h4" />
+                <defs>
+                  <linearGradient id="chip-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.1" />
+                    <stop offset="100%" stopColor="#d97706" stopOpacity="0.5" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
 
-            {/* Persona label */}
-            <div className="inline-flex items-center gap-1.5 bg-slate-900/60 border border-slate-850 px-2.5 py-1 rounded-lg">
-              {getPersonaIcon(rawPersona)}
-              <span className="text-[10px] font-bold text-slate-300 font-mono uppercase tracking-wider">
-                {normalizedPersona}
-              </span>
+            <div className="flex justify-between items-end relative z-10 border-t border-slate-900/40 pt-3 text-left">
+              <div className="space-y-0.5">
+                <span className="text-[7px] font-mono text-slate-500 uppercase tracking-wider block">Customer Segment</span>
+                <div className="flex items-center gap-1.5">
+                  {getPersonaIcon(rawPersona)}
+                  <span className="text-[9.5px] font-bold text-slate-200 font-mono uppercase tracking-wider">
+                    {normalizedPersona}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[7px] font-mono text-slate-500 uppercase tracking-wider block">RFM Rating</span>
+                <span className="text-lg font-extrabold text-emerald-400 font-mono tracking-tight">
+                  {currentCustomer.mvpScore.toFixed(1)}<span className="text-[9px] text-slate-500">/100</span>
+                </span>
+              </div>
             </div>
-
-            {/* Witty observation block */}
-            <p className="text-xs text-purple-200/90 font-sans italic border-l-2 border-purple-500/40 pl-3.5 py-1 leading-relaxed bg-purple-950/5 rounded-r-md">
-              "{getWittyObservation(currentCustomer)}"
-            </p>
-
           </div>
 
-          <div className="text-[8.5px] text-slate-500 font-mono border-t border-slate-900/60 pt-2.5">
-            Weighted Score: <span className="text-purple-400 font-bold">{currentCustomer.mvpScore.toFixed(1)}/100</span> (LTV, Orders, Recency, Engagement)
+          {/* Observation Block & Cycle Trigger */}
+          <div className="bg-slate-950/20 border border-slate-900 rounded-xl p-4 flex items-center justify-between gap-4 hover:border-slate-800 transition-colors">
+            <div className="flex-1 space-y-1 text-left">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${churnRisk.label === "Low" ? "bg-emerald-500" : churnRisk.label === "Medium" ? "bg-amber-500" : "bg-rose-500"}`} />
+                <span className="text-[8px] font-mono text-slate-400 uppercase tracking-widest">{churnRisk.label} Churn Risk Profile</span>
+              </div>
+              <p className="text-xs text-purple-200/90 font-sans italic pl-1 leading-relaxed">
+                "{getWittyObservation(currentCustomer)}"
+              </p>
+            </div>
+            
+            {/* Cycle next top customer button */}
+            <button
+              onClick={handleCycleNext}
+              title="Cycle to next top customer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-slate-400 hover:text-purple-300 transition-all cursor-pointer flex-shrink-0"
+            >
+              <RefreshCw size={11} className="hover:rotate-180 transition-transform duration-500" />
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider">Next Customer</span>
+            </button>
           </div>
+
         </div>
 
         {/* Right Details Grid */}
         <div className="flex-1 grid grid-cols-2 gap-4">
           
           {/* Attribute 1: LTV */}
-          <div className="border border-slate-905 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-850 transition-colors">
-            <span className="text-[8.5px] uppercase tracking-wider font-mono text-slate-500 block">Lifetime Value (LTV)</span>
-            <span className="text-lg font-bold text-emerald-400 font-mono mt-1">{formatINR(currentCustomer.totalSpend)}</span>
+          <div className="border border-slate-900/60 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-800/80 hover:bg-slate-950/45 transition-all group text-left">
+            <div className="flex justify-between items-start">
+              <span className="text-[8px] uppercase tracking-wider font-mono text-slate-500">Lifetime Value</span>
+              <TrendingUp size={12} className="text-emerald-500/60" />
+            </div>
+            <div className="mt-4">
+              <span className="text-lg font-bold text-emerald-400 font-mono tracking-tight">{formatINR(currentCustomer.totalSpend)}</span>
+              <div className="w-full bg-slate-900 h-1 rounded-full mt-2 overflow-hidden">
+                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, (currentCustomer.totalSpend / 200000) * 100)}%` }} />
+              </div>
+            </div>
           </div>
 
           {/* Attribute 2: Orders count */}
-          <div className="border border-slate-905 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-850 transition-colors">
-            <span className="text-[8.5px] uppercase tracking-wider font-mono text-slate-500 block">Total Orders</span>
-            <span className="text-lg font-bold text-white font-mono mt-1">{currentCustomer.orderCount} <span className="text-[10px] text-slate-500">purchased</span></span>
+          <div className="border border-slate-900/60 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-800/80 hover:bg-slate-950/45 transition-all group text-left">
+            <div className="flex justify-between items-start">
+              <span className="text-[8px] uppercase tracking-wider font-mono text-slate-500">Order Frequency</span>
+              <ShoppingBag size={12} className="text-indigo-400/60" />
+            </div>
+            <div className="mt-4">
+              <span className="text-lg font-bold text-slate-100 font-mono tracking-tight">{currentCustomer.orderCount} <span className="text-[10px] text-slate-500">purchased</span></span>
+              <div className="w-full bg-slate-900 h-1 rounded-full mt-2 overflow-hidden">
+                <div className="bg-indigo-400 h-full rounded-full" style={{ width: `${Math.min(100, (currentCustomer.orderCount / 25) * 100)}%` }} />
+              </div>
+            </div>
           </div>
 
           {/* Attribute 3: Favorite Category */}
-          <div className="border border-slate-905 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-850 transition-colors">
-            <span className="text-[8.5px] uppercase tracking-wider font-mono text-slate-500 block">Favorite Category</span>
-            <span className="text-xs font-bold text-slate-200 font-mono uppercase mt-1 truncate">
-              {currentCustomer.favoriteCategory || (currentCustomer.tags && currentCustomer.tags[1]) || "Mixed"}
-            </span>
+          <div className="border border-slate-900/60 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-800/80 hover:bg-slate-950/45 transition-all group text-left">
+            <span className="text-[8px] uppercase tracking-wider font-mono text-slate-500 block mb-3">Favorite Category</span>
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-200 font-mono uppercase tracking-wide bg-purple-950/40 border border-purple-900/30 px-2.5 py-1 rounded-md inline-block">
+                {currentCustomer.favoriteCategory || (currentCustomer.tags && currentCustomer.tags[1]) || "General"}
+              </span>
+              <span className="text-[8px] text-slate-500 font-mono block mt-1">Main transaction anchor</span>
+            </div>
           </div>
 
           {/* Attribute 4: Preferred Channel */}
-          <div className="border border-slate-905 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-850 transition-colors">
-            <span className="text-[8.5px] uppercase tracking-wider font-mono text-slate-500 block">Preferred Channel</span>
+          <div className="border border-slate-900/60 bg-slate-950/20 rounded-xl p-4 flex flex-col justify-between hover:border-slate-800/80 hover:bg-slate-950/45 transition-all group text-left">
+            <span className="text-[8px] uppercase tracking-wider font-mono text-slate-500 block mb-3">Preferred Channel</span>
             <div className="flex items-center gap-1.5 mt-2">
-              {getChannelIcon(currentCustomer.preferredChannel)}
-              <span className="text-xs font-bold text-slate-300 font-mono uppercase">
+              <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center">
+                {getChannelIcon(currentCustomer.preferredChannel)}
+              </div>
+              <span className="text-xs font-bold text-slate-300 font-mono uppercase tracking-wider">
                 {currentCustomer.preferredChannel || "Email"}
               </span>
             </div>
@@ -276,7 +335,7 @@ export default function TopCustomerSpotlight({ importResult }: TopCustomerSpotli
         </div>
 
       </div>
-
+      </div>
     </section>
   );
 }

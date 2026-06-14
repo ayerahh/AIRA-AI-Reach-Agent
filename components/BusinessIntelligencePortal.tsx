@@ -237,7 +237,7 @@ export default function BusinessIntelligencePortal() {
           <div>
             {ingestCustCount * ingestOrdersPerCust > 500 && (
               <p className="text-[9px] text-rose-400 font-mono mb-3">
-                ⚠️ Limit Exceeded: Generated orders cannot exceed 500.
+                Limit Exceeded: Generated orders cannot exceed 500.
               </p>
             )}
 

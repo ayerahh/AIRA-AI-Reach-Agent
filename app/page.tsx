@@ -13,7 +13,7 @@
  * 5. User approves → POST /api/campaigns/launch → analytics surface
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, Fragment } from "react";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import TelemetryDashboard from "@/components/TelemetryDashboard";
 import { GuidedDemoSystem } from "@/components/GuidedDemoSystem";
@@ -27,7 +27,7 @@ import {
   MegaFooter,
   AttributionBar,
 } from "@/components/AiraShowcaseSections";
-import { CAMPAIGN_SUGGESTIONS, type CampaignSuggestion } from "@/lib/campaign-suggestions";
+import { SEED_SUGGESTIONS, type CampaignSuggestion } from "@/lib/campaign-suggestions";
 import {
   Sparkles,
   Brain,
@@ -48,6 +48,7 @@ import {
   Mail,
   Bell,
   Terminal as TerminalIcon,
+  ChevronDown,
 } from "lucide-react";
 import { cn, formatINR, formatPct } from "@/lib/utils";
 import type {
@@ -334,7 +335,7 @@ function VariantCard({
           Tone: <span className="text-slate-300 font-bold">{variant.tone}</span>
         </span>
         <span className="text-[9px] text-purple-400/80 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-          Click to inspect variant analytics ➔
+          Click to select this variant ➔
         </span>
       </div>
     </button>
@@ -480,42 +481,448 @@ const warLogs = [
 // DYNAMIC CUSTOMER MATCHING (With Safe Fallback Dataset)
 // ============================================================
 
-function getContextualCustomer(goalText: string, customers?: any[]) {
-  const lower = goalText ? goalText.toLowerCase() : "";
-  
-  // Clean fallback list just in case the main 250-customer state array isn't accessible
-  const backupList = [
-    { name: "Rahul Sharma", city: "Mumbai", tier: "Gold", status: "Active", orderCount: 12, totalSpent: 12450 },
-    { name: "Priya Nair", city: "Bangalore", tier: "Platinum", status: "VIP", orderCount: 34, totalSpent: 54900 },
-    { name: "Amit Patel", city: "Ahmedabad", tier: "Standard", status: "At Risk", orderCount: 3, totalSpent: 4120 },
-    { name: "Sneha Reddy", city: "Hyderabad", tier: "Platinum", status: "Active", orderCount: 18, totalSpent: 28750 },
-    { name: "Vikram Singh", city: "Delhi", tier: "Gold", status: "Dormant", orderCount: 5, totalSpent: 18200 }
+
+// ============================================================================
+// ACTIVE SEGMENT ROUTING PIPELINE SIMULATION
+// ============================================================================
+function SegmentRoutingPipelineSimulation({
+  importResult,
+  selectedCustomer,
+  goalText,
+}: {
+  importResult: any;
+  selectedCustomer: any;
+  goalText: string;
+}) {
+  const allCustomers: any[] = importResult?.importedCustomers || importResult?.preview || [];
+  const activeCustomer = selectedCustomer || allCustomers[0] || null;
+  const totalCustomersCount = importResult?.customersAdded ?? importResult?.totalCustomers ?? allCustomers.length ?? 0;
+  const totalOrdersCount = importResult?.ordersAdded ?? importResult?.totalOrders ?? 0;
+
+  const displayName = activeCustomer?.name || "—";
+  const getAvatar = (name: string) =>
+    name.split(/\s+/).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "??";
+  const avatar = activeCustomer ? getAvatar(displayName) : "—";
+
+  // ── Derive all display values from REAL customer attributes ─────────────────
+  const tier = (activeCustomer?.tier || "bronze").toLowerCase();
+  const custStatus = (activeCustomer?.status || "active").toLowerCase();
+  const engScore: number = activeCustomer?.engagementScore ?? 50;
+  const preferredCh = (activeCustomer?.preferredChannel || "email").toLowerCase();
+
+  // Days since last order
+  const daysSince = activeCustomer?.lastOrderDate
+    ? Math.floor((Date.now() - new Date(activeCustomer.lastOrderDate).getTime()) / 86_400_000)
+    : 0;
+
+  // Tier insight
+  const tierInsight =
+    tier === "platinum" ? "Platinum tier — top 5% LTV cohort" :
+    tier === "gold"     ? "Gold tier — high-value repeat buyer" :
+    tier === "silver"   ? "Silver tier — growing engagement" :
+                          "Bronze tier — early lifecycle stage";
+
+  // Recency insight
+  const recencyInsight =
+    daysSince > 90 ? `Dormancy alert: ${daysSince}d since last order` :
+    daysSince > 45 ? `Re-engagement window: ${daysSince}d inactive` :
+    daysSince > 14 ? `Moderate recency: last order ${daysSince}d ago` :
+    daysSince > 0  ? `Active buyer: ordered ${daysSince}d ago` :
+                     "No prior order on record";
+
+  // Engagement insight
+  const engInsight =
+    engScore >= 70 ? `High engagement index: ${engScore}/100` :
+    engScore >= 45 ? `Moderate engagement: ${engScore}/100` :
+                     `Low signal — nurture flow eligible: ${engScore}/100`;
+
+  const insights = activeCustomer
+    ? [tierInsight, recencyInsight, engInsight]
+    : ["Ingest customer data to activate insights", "Routing engine will populate automatically", "Persona and LTV signals pending"];
+
+  // Timeline from real dates
+  const lastOrderLabel = activeCustomer?.lastOrderDate
+    ? new Date(activeCustomer.lastOrderDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : null;
+  const joinedRaw = activeCustomer?.joinedDate || activeCustomer?.joinDate;
+  const joinedLabel = joinedRaw
+    ? new Date(joinedRaw).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
+    : null;
+
+  const timeline = activeCustomer ? [
+    ...(joinedLabel ? [{ label: "Customer since", time: joinedLabel }] : []),
+    ...(lastOrderLabel ? [{ label: "Last order date", time: lastOrderLabel }] : []),
+    { label: `${daysSince > 45 ? "Re-engagement" : "Broadcast"} segment match`, time: "Now" },
+  ] : [
+    { label: "Awaiting data ingestion", time: "—" },
   ];
 
-  // Use the provided array if it's passed down, otherwise fall back to our secure local dataset
-  const activeDataset = customers && customers.length > 0 ? customers : backupList;
-  
-  if (!lower) return activeDataset[0];
-  
-  // Score each customer profile based on matching input keywords
-  const scored = activeDataset.map((customer: any) => {
-    let score = 0;
-    const data = `${customer.name || ''} ${customer.city || ''} ${customer.tier || ''} ${customer.status || ''}`.toLowerCase();
-    
-    const keywords = ["cart", "vip", "gold", "platinum", "lapsed", "winback", "new", "launch", "aov", "cross"];
-    keywords.forEach(kw => {
-      if (lower.includes(kw) && data.includes(kw)) score += 10;
-    });
-    
-    if (customer.tier && lower.includes(customer.tier.toLowerCase())) score += 15;
-    
-    return { customer, score };
-  });
-  
-  const best = scored.sort((a: any, b: any) => b.score - a.score)[0];
-  return best ? best.customer : activeDataset[0];
+  // Engine status from real attributes
+  const engineStatus = !activeCustomer ? "Engine idle — no data ingested" :
+    daysSince > 90 ? "Win-back routing matrix active" :
+    daysSince > 45 ? "Re-engagement routing active" :
+    custStatus === "at_risk" ? "Churn prevention gateway engaged" :
+    (tier === "platinum" || tier === "gold") ? "VIP priority lane routing" :
+    "Standard routing gateway";
+
+  // Gateway config: preferred channel ACTIVE, others STANDBY
+  const gatewayConfig = [
+    { name: "WhatsApp Gateway", chKey: "whatsapp", protocol: "WABA/v2.4", latency: "14ms", baseColor: "emerald" },
+    { name: "Email SMTP Relays", chKey: "email",    protocol: "SES/TLS1.3", latency: "42ms", baseColor: "blue"    },
+    { name: "SMS Ingest Node",   chKey: "sms",      protocol: "SMPP/v3.4",  latency: "8ms",  baseColor: "amber"   },
+  ].map(g => ({
+    ...g,
+    isActive: activeCustomer ? g.chKey === preferredCh : false,
+    status: activeCustomer && g.chKey === preferredCh ? "ACTIVE" : "STANDBY",
+    color: g.chKey === "whatsapp"
+      ? "text-emerald-400 border-emerald-950/50 bg-emerald-950/15"
+      : g.chKey === "email"
+      ? "text-blue-400 border-blue-950/50 bg-blue-950/15"
+      : "text-amber-400 border-amber-950/50 bg-amber-950/15",
+    dot: activeCustomer && g.chKey === preferredCh
+      ? (g.chKey === "whatsapp" ? "bg-emerald-500" : g.chKey === "email" ? "bg-blue-500" : "bg-amber-500")
+      : "bg-slate-600",
+  }));
+
+  const tierColor =
+    tier === "platinum" ? "from-slate-200 to-slate-400" :
+    tier === "gold"     ? "from-amber-300 to-yellow-500" :
+    tier === "silver"   ? "from-slate-300 to-slate-500" :
+                          "from-orange-400 to-amber-600";
+  const tierBadgeStyle =
+    tier === "platinum" ? "bg-slate-800/60 text-slate-200 border-slate-600/50" :
+    tier === "gold"     ? "bg-amber-950/60 text-amber-300 border-amber-700/40" :
+    tier === "silver"   ? "bg-slate-800/60 text-slate-300 border-slate-600/40" :
+                          "bg-orange-950/50 text-orange-400 border-orange-800/40";
+
+  return (
+    <section data-tour="pipeline-diagram" className="w-full py-10 mb-12">
+      {/* ── Section header ── */}
+      <div className="relative mb-8">
+        <div className="absolute -inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/25 to-transparent" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-6">
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              </span>
+              Channel Routing Preview
+            </h3>
+            <p className="text-[11px] text-slate-500 font-mono mt-1">
+              Live preview for the selected customer — tier, engagement, and the channel AIRA would route them through
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap text-[10px] font-mono">
+            <span className="px-2.5 py-1 rounded-lg border border-emerald-900/60 bg-emerald-950/30 text-emerald-400 font-semibold">
+              {totalCustomersCount} customers in store
+            </span>
+            <span className="px-2.5 py-1 rounded-lg border border-indigo-900/60 bg-indigo-950/30 text-indigo-400 font-semibold">
+              {totalOrdersCount} orders ingested
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-4 items-stretch relative">
+        {/* SVG wires */}
+        <svg className="hidden lg:block absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 1000 300" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="wg1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0.7" />
+            </linearGradient>
+            <linearGradient id="wg2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#ec4899" stopOpacity="0.7" />
+            </linearGradient>
+            <linearGradient id="wg3" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#ec4899" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.7" />
+            </linearGradient>
+          </defs>
+          <path d="M 250 150 H 290" stroke="url(#wg1)" strokeWidth="2" fill="none" />
+          <path d="M 545 150 H 590" stroke="url(#wg2)" strokeWidth="2" fill="none" />
+          <path d="M 720 150 C 740 150, 750 70, 785 70" stroke="url(#wg3)" strokeWidth="1.5" fill="none" />
+          <path d="M 720 150 H 785" stroke="url(#wg3)" strokeWidth="1.5" fill="none" />
+          <path d="M 720 150 C 740 150, 750 230, 785 230" stroke="url(#wg3)" strokeWidth="1.5" fill="none" />
+          <circle r="3" fill="#a855f7"><animateMotion dur="2.2s" repeatCount="indefinite" path="M 250 150 H 290" /></circle>
+          <circle r="3" fill="#6366f1"><animateMotion dur="2.8s" repeatCount="indefinite" path="M 545 150 H 590" /></circle>
+          <circle r="3" fill="#ec4899"><animateMotion dur="3.6s" repeatCount="indefinite" path="M 720 150 C 740 150, 750 70, 785 70" /></circle>
+          <circle r="3" fill="#3b82f6"><animateMotion dur="3.2s" repeatCount="indefinite" path="M 720 150 H 785" /></circle>
+          <circle r="3" fill="#10b981"><animateMotion dur="4s" repeatCount="indefinite" path="M 720 150 C 740 150, 750 230, 785 230" /></circle>
+        </svg>
+
+        {/* ── Column A: User Node ── */}
+        <div className="col-span-12 lg:col-span-3 rounded-2xl border border-slate-800/70 bg-gradient-to-b from-slate-900/60 to-slate-950/80 backdrop-blur-sm relative flex flex-col overflow-hidden">
+          {/* Subtle top glow bar */}
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+          <div className="p-5 flex flex-col flex-1">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">User Node</p>
+              <span className="text-[9px] font-mono bg-purple-950/50 text-purple-300 border border-purple-800/40 px-1.5 py-0.5 rounded-md">LIVE FOCUS</span>
+            </div>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className={cn("w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center font-bold text-base shadow-lg border border-white/10 text-white flex-shrink-0", tierColor)}>
+                {avatar}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-white text-sm truncate leading-tight">{displayName}</h4>
+                <p className="text-[10px] text-slate-500 font-mono truncate mt-0.5">{activeCustomer?.email || "—"}</p>
+                {activeCustomer?.city && (
+                  <p className="text-[9px] text-slate-600 font-mono mt-0.5">{activeCustomer.city}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2.5 font-mono text-[11px] mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">LTV</span>
+                <span className="text-emerald-400 font-bold">₹{(activeCustomer?.totalSpend || activeCustomer?.totalSpent || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Orders</span>
+                <span className="text-indigo-300 font-bold">{activeCustomer?.orderCount || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Tier</span>
+                <span className={cn("text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase", tierBadgeStyle)}>{tier}</span>
+              </div>
+            </div>
+
+            {/* Engagement bar */}
+            {activeCustomer && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-mono text-slate-600 uppercase">Engagement</span>
+                  <span className="text-[9px] font-mono text-slate-400">{engScore}/100</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-slate-800">
+                  <div
+                    className={cn("h-full rounded-full transition-all", engScore >= 70 ? "bg-emerald-500" : engScore >= 45 ? "bg-amber-500" : "bg-red-500")}
+                    style={{ width: `${engScore}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="text-[9px] font-mono text-indigo-400/70 bg-indigo-950/20 border border-indigo-900/30 rounded-lg px-2 py-1.5 mt-auto">
+              Selected from Customer Spotlight · scroll up to change
+            </div>
+          </div>
+          <div className="hidden lg:flex absolute -right-2 top-1/2 w-4 h-4 rounded-full bg-violet-500 border-2 border-slate-950 -translate-y-1/2 z-10 shadow-[0_0_8px_#7c3aed]" />
+        </div>
+
+        {/* ── Column B: Behavior Track ── */}
+        <div className="col-span-12 lg:col-span-3 rounded-2xl border border-slate-800/70 bg-gradient-to-b from-slate-900/60 to-slate-950/80 backdrop-blur-sm relative overflow-hidden">
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+          <div className="p-5 flex flex-col h-full gap-4">
+            <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Behavior Track</p>
+
+            <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-3">
+              <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-2.5">Audience Insights</p>
+              <ul className="space-y-2">
+                {insights.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-[11px] text-slate-300 font-mono">
+                    <CheckCircle2 size={10} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span className="leading-tight">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-3">
+              <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-3">Behavior Timeline</p>
+              <div className="space-y-3">
+                {timeline.map((tick, i) => (
+                  <div key={tick.label} className="flex items-start gap-2">
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className={cn("w-2 h-2 rounded-full ring-2", i === timeline.length - 1 ? "bg-emerald-400 ring-emerald-900 animate-pulse" : "bg-indigo-400 ring-indigo-900")} />
+                      {i < timeline.length - 1 && <div className="w-px h-5 bg-indigo-800/50 mt-1" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-slate-200 font-mono leading-tight">{tick.label}</p>
+                      <p className="text-[9px] text-slate-500 font-mono">{tick.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="hidden lg:flex absolute -right-2 top-1/2 w-4 h-4 rounded-full bg-violet-500 border-2 border-slate-950 -translate-y-1/2 z-10 shadow-[0_0_8px_#7c3aed]" />
+        </div>
+
+        {/* ── Column C: AIRA Brain ── */}
+        <div className="col-span-12 lg:col-span-2 flex flex-col items-center justify-center p-4 relative">
+          <div className="relative w-full max-w-[140px] aspect-square flex items-center justify-center mx-auto">
+            <div className="absolute inset-0 rounded-full border border-dashed border-indigo-500/25 animate-spin-slow" />
+            <div className="absolute inset-2 rounded-full border-2 border-double border-violet-400/30 animate-spin-reverse-slow" />
+            <div className="absolute inset-0 rounded-full bg-indigo-500/5 blur-xl" />
+            <div className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.5)] border border-white/10 hover:scale-105 transition-transform duration-300 cursor-default">
+              <Brain size={28} className="text-white" />
+            </div>
+          </div>
+          <p className="mt-4 text-[10px] font-mono text-center text-indigo-300 uppercase tracking-wider leading-relaxed">
+            AIRA<br />Routing Engine
+          </p>
+          <p className="mt-1 text-[9px] font-mono text-slate-600 text-center max-w-[120px] leading-tight">
+            {engineStatus}
+          </p>
+          <div className="hidden lg:flex absolute -right-2 top-1/2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-950 -translate-y-1/2 z-10 shadow-[0_0_8px_#10b981]" />
+        </div>
+
+        {/* ── Column D: Gateway Routing Map ── */}
+        <div className="col-span-12 lg:col-span-4 rounded-2xl border border-slate-800/70 bg-gradient-to-b from-slate-900/60 to-slate-950/80 backdrop-blur-sm overflow-hidden">
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+          <div className="p-5 flex flex-col h-full">
+            <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-4">Gateway Routing Map</p>
+            <div className="space-y-3 flex-1">
+              {gatewayConfig.map((gateway) => (
+                <div
+                  key={gateway.name}
+                  className={cn(
+                    "rounded-xl border p-3.5 font-mono text-xs transition-all duration-200",
+                    gateway.color,
+                    gateway.isActive && "shadow-[0_0_20px_rgba(16,185,129,0.15)] border-emerald-700/60"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("w-1.5 h-1.5 rounded-full", gateway.dot, gateway.isActive && "animate-pulse")} />
+                      <span className="font-bold tracking-tight">{gateway.name}</span>
+                    </div>
+                    {gateway.isActive && (
+                      <span className="text-[8px] bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        PREFERRED
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] opacity-70">
+                    <span>{gateway.protocol}</span>
+                    <span className="flex items-center gap-1">
+                      <span className={cn("font-semibold", gateway.isActive ? "opacity-100" : "")}>{gateway.status}</span>
+                      <span className="text-slate-600">·</span>
+                      <span>{gateway.latency}</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-[9px] font-mono text-slate-700 border-t border-slate-900 pt-3 leading-tight">
+              AIRA routes messages through the customer&apos;s preferred channel. The other two are kept on standby.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
-// (Unused DEMO_STEPS removed for GuidedDemoSystem integration)
+
+// ─── Builder Dossier (collapsible) ───────────────────────────────────────────
+
+function BuilderDossier() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-slate-800/60 overflow-hidden bg-gradient-to-b from-slate-900/50 to-slate-950/80">
+      {/* Toggle header */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left group hover:bg-slate-800/20 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+            <Users size={13} className="text-purple-400" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white font-mono">About the Builder — Aira K. Salish</p>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">Who built AIRA and why · click to expand</p>
+          </div>
+        </div>
+        <ChevronDown
+          size={16}
+          className={cn("text-slate-500 transition-transform duration-300 flex-shrink-0", open && "rotate-180")}
+        />
+      </button>
+
+      {/* Collapsible content */}
+      {open && (
+        <div className="px-6 pb-8 border-t border-slate-800/50 animate-slide-up">
+          <div className="pt-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            {/* Avatar + tags */}
+            <div className="lg:col-span-3 flex flex-col items-center text-center gap-4">
+              <div className="relative group">
+                <div className="absolute -inset-1.5 bg-gradient-to-r from-purple-600 via-rose-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-500" />
+                <div className="relative w-28 h-28 rounded-3xl overflow-hidden shadow-2xl border border-white/5">
+                  <img src="/aira-new.jpg" alt="Aira K. Salish" className="w-full h-full object-cover" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-mono tracking-widest bg-purple-950/50 border border-purple-800/40 text-purple-300 px-2.5 py-0.5 rounded-full uppercase font-bold block">
+                  AI/ML Student
+                </span>
+                <p className="text-[10px] font-mono text-slate-500">SRMIST · CSE (AI/ML)</p>
+                <p className="text-[10px] font-mono text-slate-600">RA2311026011017</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                {[
+                  { label: "linkedin", href: "https://linkedin.com/in/airasalish" },
+                  { label: "github", href: "https://github.com/ayerahh" },
+                  { label: "instagram", href: "https://instagram.com/aira.kivy" },
+                ].map((l) => (
+                  <a
+                    key={l.label}
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-800 bg-slate-950/60 hover:text-purple-400 hover:border-purple-500/30 transition-all"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div className="lg:col-span-9 space-y-5">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Aira K. Salish</h2>
+                <p className="text-xs font-mono text-purple-400 mt-1">Builder of AIRA · Xeno Engineering Internship Applicant 2026</p>
+              </div>
+
+              <ul className="space-y-2.5 font-mono text-xs text-slate-300 leading-relaxed">
+                {[
+                  { label: "Academic Track", value: <>B.Tech CSE student specializing in <span className="text-emerald-400">AI &amp; ML</span> at SRMIST.</> },
+                  { label: "Leadership", value: <>Technical Lead (AI/ML) at <span className="text-rose-400">ACM Women (ACMW)</span>.</> },
+                  { label: "Industry", value: <>Former Prompt Engineering Intern at <span className="text-emerald-400">BabyBillion Pvt. Ltd.</span></> },
+                  { label: "Mentorship", value: <>Worked under <span className="text-emerald-400">Dinesh Godara</span> — former VP at Unacademy, founder of BabyBillion.</> },
+                  { label: "Shipped", value: <><span className="text-rose-400">Generative AI Researcher</span> for the Spotted app (founded by Amit Baradia).</> },
+                  { label: "Open Source", value: <>GSSoC contributor · Graduate of <span className="text-emerald-400">CitiBridge</span> Program 2026 by Citibank.</> },
+                ].map((item) => (
+                  <li key={item.label} className="flex items-start gap-2">
+                    <span className="text-purple-500 font-bold mt-0.5 flex-shrink-0">▪</span>
+                    <span><strong className="text-slate-200">{item.label}:</strong> {item.value}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="pt-3 border-t border-slate-800/50 text-[11px] font-mono text-slate-400 space-y-1">
+                <div><span className="text-slate-600 mr-2">→</span><strong className="text-slate-300">Focus:</strong> Autonomous AI agents, intelligent automation, and failsafe tech layers.</div>
+                <div><span className="text-slate-600 mr-2">→</span><strong className="text-slate-300">Vision:</strong> Engineering abstract concepts into products with real-world impact.</div>
+              </div>
+
+              <blockquote className="border-l-2 border-purple-500 bg-purple-950/10 rounded-r-xl px-4 py-2.5 italic text-xs text-slate-400 font-mono">
+                &ldquo;Building AI agents and systems that bridge the gap between abstract innovation and deterministic execution.&rdquo;
+              </blockquote>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -542,6 +949,58 @@ export default function HomePage() {
   const [isImporting, setIsImporting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<CampaignSuggestion[]>([]);
+
+  // New States for Observability drawer and spotlight customer cycle
+  const [isObservabilityOpen, setIsObservabilityOpen] = useState(false);
+  const [selectedSpotlightCustomer, setSelectedSpotlightCustomer] = useState<any>(null);
+  const [pastCampaigns, setPastCampaigns] = useState<Campaign[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Fetch data-driven campaign suggestions whenever the customer base changes
+  useEffect(() => {
+    if (!importResult) return;
+    fetch("/api/campaigns/suggestions")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+          setDynamicSuggestions(data.suggestions);
+        }
+      })
+      .catch(() => {});
+  }, [importResult]);
+
+  // Auto-seed demo data if guided tour starts and no data is loaded yet
+  useEffect(() => {
+    if (guidedDemo && !importResult) {
+      const autoSeed = async () => {
+        try {
+          const response = await fetch("/api/import", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "beauty-brand",
+              customerCount: 50,
+              ordersPerCustomer: 5,
+            }),
+          });
+          const data = await response.json();
+          if (response.ok && data.success) {
+            setImportResult(data);
+            setToast({
+              type: "success",
+              message: `Auto-seeded dataset for Guided Tour: ${data.customersAdded} customers ingested.`
+            });
+          }
+        } catch (err) {
+          console.error("Failed to auto-seed demo data for guided tour:", err);
+        }
+      };
+      autoSeed();
+    }
+  }, [guidedDemo, importResult]);
 
   useEffect(() => {
     if (toast) {
@@ -608,7 +1067,7 @@ export default function HomePage() {
   // Session Operator Name States
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // Build War Logs Sidebar State
+  // "Issues I Faced" Sidebar State
   const [isWarLogsOpen, setIsWarLogsOpen] = useState(false);
 
   // First-Time Welcome Demo Modal State
@@ -638,7 +1097,7 @@ export default function HomePage() {
     }
   }, [userName]);
 
-  // Build War Logs - Close sidebar with Escape key
+  // "Issues I Faced" - Close sidebar with Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isWarLogsOpen) {
@@ -663,7 +1122,9 @@ export default function HomePage() {
       return;
     }
     const tokens = lower.split(/\s+/).filter((t) => t.length > 1);
-    const filtered = CAMPAIGN_SUGGESTIONS.filter((suggestion) => {
+    // Dynamic suggestions (data-driven) appear first, seed list fills the rest
+    const allSuggestions = [...dynamicSuggestions, ...SEED_SUGGESTIONS];
+    const filtered = allSuggestions.filter((suggestion) => {
       const haystack = `${suggestion.label} ${suggestion.text}`.toLowerCase();
       const prefixMatch =
         haystack.startsWith(lower) ||
@@ -679,20 +1140,9 @@ export default function HomePage() {
   }, [debouncedText]);
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [themeMode, setThemeMode] = useState<"dark" | "light">("dark");
 
   const handleMouseMove = (e: React.MouseEvent) => {
     setMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const toggleTheme = () => {
-    const nextTheme = themeMode === "dark" ? "light" : "dark";
-    setThemeMode(nextTheme);
-    if (nextTheme === "light") {
-      document.documentElement.classList.add("light-theme-active");
-    } else {
-      document.documentElement.classList.remove("light-theme-active");
-    }
   };
 
   const handleTextareaChange = (value: string) => {
@@ -910,8 +1360,8 @@ export default function HomePage() {
         ltv: "₹7,650",
         preferredChannels: "Email, WhatsApp",
         tiers: ["Monitoring", "Active Profile"],
-        insight: "Monitoring user telemetry signals…",
-        path: "Awaiting active intent capture rules…",
+        insight: "Ready — import your customers and describe your goal",
+        path: "Waiting for campaign input…",
       },
       insights: [
         "Session Active",
@@ -926,7 +1376,7 @@ export default function HomePage() {
       channels: [
         {
           type: "email",
-          message: "Monitoring user telemetry signals… Awaiting active intent capture rules.",
+          message: "Awaiting campaign goal — describe what you want to do and AIRA will route this channel.",
           productLabel: "No SKU bound",
         },
         {
@@ -936,7 +1386,7 @@ export default function HomePage() {
         },
         {
           type: "sms",
-          message: "Awaiting active intent capture rules from goal input stream.",
+          message: "Standby — channel activates once you run a campaign.",
           productLabel: "Gateway standby",
         },
       ],
@@ -1049,6 +1499,33 @@ export default function HomePage() {
     setSelectedIndex(0);
     setTimeout(() => textareaRef.current?.focus(), 100);
   }, []);
+
+  // ── Live analytics polling while campaign is in results phase ─────────────
+  useEffect(() => {
+    if (phase !== "results" || !campaign) return;
+    const id = campaign.id;
+    let active = true;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/campaigns/${id}`);
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        if (data.analytics) setAnalytics(data.analytics);
+        if (data.campaign) setCampaign((prev) => prev?.id === id ? data.campaign : prev);
+      } catch {}
+    };
+    const interval = setInterval(poll, 2500);
+    return () => { active = false; clearInterval(interval); };
+  }, [phase, campaign?.id]);
+
+  // ── Refresh campaign history whenever a campaign is launched ───────────────
+  useEffect(() => {
+    if (phase !== "results") return;
+    fetch("/api/campaigns")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setPastCampaigns(data); })
+      .catch(() => {});
+  }, [phase]);
 
   // ── Copy message body ──────────────────────────────────────────────────────
 
@@ -1165,56 +1642,137 @@ export default function HomePage() {
       {/* ============================================================
           SECTION 2: FULL-SCREEN BRANDING LANDING TAKEOVER (100vh Takeover)
           ============================================================ */}
-      <section data-tour="platform-takeover" className="w-screen h-screen min-h-screen bg-slate-950 relative flex flex-col justify-between items-center overflow-hidden p-8 md:p-16 border-t border-purple-500/10 z-10">
+      <section data-tour="platform-takeover" className="w-screen h-screen min-h-screen bg-slate-950 relative flex flex-col justify-between items-center overflow-hidden p-8 md:p-16 border-b border-purple-500/10 z-10">
         
         {/* Deep Field Ambient Grid Mask */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#090d16_1px,transparent_1px),linear-gradient(to_bottom,#090d16_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_80%,transparent_100%)] opacity-60 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#090d16_1px,transparent_1px),linear-gradient(to_bottom,#090d16_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,transparent_15%,#000_75%)] opacity-60 pointer-events-none" />
 
-        {/* Center Premium Display Headers */}
-        <div className="relative z-10 w-full text-center mt-auto space-y-4">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500/10 to-rose-500/10 border border-purple-500/20 px-3 py-1 rounded-full backdrop-blur-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            <span className="text-[10px] font-mono tracking-[0.35em] uppercase text-slate-400 font-bold">
-              AI-Native Customer Reach Platform
-            </span>
+        {/* Floating AI Agent Badges in background grid */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          {/* Segment Agent */}
+          <div className="absolute top-[20%] left-[10%] md:left-[15%] p-3.5 rounded-xl border border-slate-800/80 bg-slate-950/60 backdrop-blur-md flex items-center gap-2.5 animate-bounce select-none" style={{ animationDuration: "7s" }}>
+            <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7] animate-pulse" />
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">Segment Agent · ACTIVE</span>
           </div>
-          
-          <h1 className="text-7xl md:text-9xl font-black text-white tracking-tighter uppercase select-none bg-clip-text bg-gradient-to-b from-white via-white to-slate-700/40">
-            AIRA
-          </h1>
-          
-          <p className="text-xs font-mono text-slate-500 tracking-wide max-w-md mx-auto">
-            Built for Xeno · Take-home Engineering Assignment <br />
-          </p>
+          {/* Copy Agent */}
+          <div className="absolute top-[35%] right-[8%] md:right-[12%] p-3.5 rounded-xl border border-slate-800/80 bg-slate-950/60 backdrop-blur-md flex items-center gap-2.5 animate-bounce select-none" style={{ animationDuration: "9s" }}>
+            <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse" />
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">Copy Variant Node · IDLE</span>
+          </div>
+          {/* Channel Router */}
+          <div className="absolute bottom-[30%] left-[12%] md:left-[18%] p-3.5 rounded-xl border border-slate-800/80 bg-slate-950/60 backdrop-blur-md flex items-center gap-2.5 animate-bounce select-none" style={{ animationDuration: "8s" }}>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">Channel Router · STANDBY</span>
+          </div>
         </div>
 
-        {/* Modular Navigation / Platform Capability Director Grid */}
-        <div className="relative z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-slate-900 pt-8 mt-auto text-center md:text-left">
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-mono font-bold text-purple-400 tracking-wider uppercase">Platform Core</p>
-            <p className="text-[11px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer">Audience Studio</p>
-            <p className="text-[11px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer">Campaigns Routing</p>
+        {/* Center Premium Display Headers */}
+        <div className="relative z-10 w-full text-center mt-auto space-y-6">
+          {/* Soft radial gradient behind the wordmark */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-gradient-to-r from-violet-600/20 to-fuchsia-600/20 filter blur-[90px] pointer-events-none z-0" />
+          
+          {/* Orbiting agent dots with thin glowing trails */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] pointer-events-none z-0">
+            {/* Orbit 1 */}
+            <div className="absolute inset-0 animate-spin" style={{ animationDuration: "10s" }}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-6 bg-gradient-to-b from-purple-500/30 to-transparent -mt-5 rounded-full origin-bottom" />
+            </div>
+            {/* Orbit 2 */}
+            <div className="absolute inset-0 animate-spin" style={{ animationDuration: "16s", animationDirection: "reverse" }}>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0.5 h-5 bg-gradient-to-t from-cyan-400/30 to-transparent -mb-4 rounded-full origin-top" />
+            </div>
+            {/* Orbit 3 */}
+            <div className="absolute inset-0 animate-spin" style={{ animationDuration: "22s" }}>
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 w-6 bg-gradient-to-r from-emerald-400/30 to-transparent -ml-5 rounded-full origin-right" />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-mono font-bold text-rose-400 tracking-wider uppercase">AI Agent Stack</p>
-            <p className="text-[11px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer">Reach Agent Layer</p>
-            <p className="text-[11px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer">Segment Synthesis</p>
+
+          <div className="relative z-10 space-y-6">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500/10 to-rose-500/10 border border-purple-500/20 px-3.5 py-1.5 rounded-full backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-[10px] font-mono tracking-[0.35em] uppercase text-slate-300 font-bold">
+                AI-Native Customer Reach Platform
+              </span>
+            </div>
+            
+            <h1 className="text-8xl md:text-9xl font-black text-white tracking-tighter uppercase select-none bg-clip-text bg-gradient-to-b from-white via-white to-slate-700/30 filter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+              AIRA
+            </h1>
+            
+            <p className="text-xs font-mono text-slate-400 tracking-wider max-w-md mx-auto leading-relaxed">
+              Type a campaign goal in plain English. AIRA segments your customers, writes the messages, and dispatches them — then shows you exactly what happened.
+            </p>
+
+            {/* Launch Console CTA and scroll down guide */}
+            <div className="flex flex-col items-center gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  document.getElementById("app-console")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="px-8 py-4 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-rose-500 to-indigo-600 hover:from-purple-500 hover:via-rose-400 hover:to-indigo-500 text-white transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] shadow-[0_0_35px_rgba(139,92,246,0.35)] hover:shadow-[0_0_50px_rgba(139,92,246,0.55)] flex items-center gap-2 border border-white/10 uppercase tracking-widest font-mono"
+              >
+                Open Campaign Console
+                <ArrowRight size={13} className="animate-pulse" />
+              </button>
+              
+              <div 
+                onClick={() => {
+                  document.getElementById("app-console")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity mt-6 cursor-pointer select-none"
+              >
+                <span className="text-[9px] font-mono tracking-widest uppercase text-slate-500">Scroll to explore</span>
+                <div className="w-5 h-8 border border-slate-800 rounded-full flex justify-center p-1 bg-slate-950/20">
+                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-mono font-bold text-indigo-400 tracking-wider uppercase">Resources</p>
-            <p className="text-[11px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer">Telemetry Logs</p>
-            <p className="text-[11px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer">System Manifest</p>
+        </div>
+
+        <div className="relative z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-slate-900 pt-8 mt-auto text-left font-mono">
+          <div className="glass-panel glass-panel-hover rounded-xl p-4">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">SYSTEM TELEMETRY</p>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs text-slate-200 font-bold">DISPATCHER ACTIVE</span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1">Uptime: 99.98% · 200/s rate</p>
           </div>
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-mono font-bold text-emerald-400 tracking-wider uppercase">Context</p>
-            <p className="text-[11px] font-mono text-slate-400">© 2026 AIRA Framework</p>
-            <p className="text-[9px] font-mono text-slate-600 uppercase tracking-tight">V1.0.0 Production</p>
+          
+          <div className="glass-panel glass-panel-hover rounded-xl p-4">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">REASONING CORE</p>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="text-xs text-slate-200 font-bold">GROQ LLAMA 3.3</span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1">Token Latency: ~12ms · 70B</p>
+          </div>
+          
+          <div className="glass-panel glass-panel-hover rounded-xl p-4">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">DATA STORE</p>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+              <span className="text-xs text-slate-200 font-bold">IN-MEMORY STORE</span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1">Import customers to activate</p>
+          </div>
+          
+          <div className="glass-panel glass-panel-hover rounded-xl p-4">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">ROUTING GATEWAYS</p>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              <span className="text-xs text-slate-200 font-bold">STANDBY DISPATCH</span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1">WhatsApp / SMTP relays</p>
           </div>
         </div>
       </section>
 
-      {/* ── Ambient gradient ─────────────────────────────────────────────── */}
-      
       {/* ── Ambient gradient ─────────────────────────────────────────────── */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
@@ -1223,12 +1781,12 @@ export default function HomePage() {
         }}
       />
 
-<div className="relative z-10 max-w-5xl mx-auto px-4">
+<div id="app-console" className="relative z-10 max-w-5xl mx-auto px-4">
       {/* Header Navbar */}
-      <header className="flex items-center justify-between py-6 border-b border-slate-900/60 relative z-20">
+      <header className="sticky top-0 z-50 -mx-4 px-4 flex items-center justify-between py-4 header-glass mb-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] flex items-center justify-center shadow-lg shadow-red-950/50 flex-shrink-0 border border-red-400/20">
-            <span className="text-white text-base">🍓</span>
+            <Sparkles size={14} className="text-white animate-pulse" />
           </div>
           <div>
             <h2 className="font-bold text-white tracking-tight text-sm flex items-center gap-1.5">
@@ -1269,8 +1827,9 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               {userName ? (
                 <>
-                  <span className="text-sm text-text-secondary flex items-center gap-1">
-                    <span>👤</span> {userName}
+                  <span className="text-sm text-text-secondary flex items-center gap-1.5 font-mono">
+                    <Users size={12} className="inline text-slate-400" />
+                    <span>{userName}</span>
                   </span>
                   <button
                     onClick={() => setIsEditingName(true)}
@@ -1302,21 +1861,33 @@ export default function HomePage() {
     <div className="text-center mb-6">
       <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full mb-4">
         <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-        <span className="text-[10px] font-mono tracking-wider text-purple-400 uppercase">AI-Native Campaign Engine · Xeno Take-Home</span>
+        <span className="text-[10px] font-mono tracking-wider text-purple-400 uppercase">AIRA · AI-Native CRM · Xeno Engineering Take-Home 2026</span>
       </div>
       <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight">
         One Prompt, <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Full Campaign</span>
       </h1>
       <p className="text-sm md:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-        Describe your target business goals in natural language. AIRA immediately parses parameters, 
-        models customer segments, structures message copies, and configures real-time telemetry pipelines automatically.
+        Import your customer data, describe what you want to achieve, and AIRA picks the right customers,
+        writes the messages, sends them through the right channel, and shows you exactly what happens — delivered, opened, clicked.
       </p>
     </div>
     
     {/* ============================================================
         PREMIUM CHASSIS LIVE ANIMATION DECK (Direct Core Track)
         ============================================================ */}
-    <div className="rounded-xl overflow-hidden border border-purple-500/30 bg-black shadow-2xl max-w-4xl mx-auto mt-8 transition-all duration-300 hover:border-purple-500/50">
+    <div className="glass-panel rounded-2xl overflow-hidden shadow-2xl max-w-4xl mx-auto mt-8 transition-all duration-300 hover:border-purple-500/40 hover:shadow-[0_0_35px_rgba(139,92,246,0.15)]">
+      {/* OS Window header */}
+      <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-950 flex items-center justify-between select-none">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56] opacity-90 shadow-[0_0_6px_#ff5f56]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] opacity-90 shadow-[0_0_6px_#ffbd2e]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f] opacity-90 shadow-[0_0_6px_#27c93f]" />
+        </div>
+        <span className="text-[10px] font-mono text-slate-400 tracking-wider">aira_orchestrator_node_0x416.mp4</span>
+        <div className="w-12 text-right">
+          <span className="text-[8px] font-mono bg-purple-950 border border-purple-900/40 text-purple-400 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">1080p</span>
+        </div>
+      </div>
       <video 
         src="/s.mp4"
         className="w-full aspect-video object-cover block" 
@@ -1334,20 +1905,59 @@ export default function HomePage() {
     </div>
     
     <p className="text-center font-mono text-[10px] text-slate-500 mt-3 uppercase tracking-wider">
-      // SYSTEM STREAM LIVE TELEMETRY LOOP
+      // recorded at SRMIST during development · all campaign logic runs live
     </p>
     
+  </div>
+
+  {/* ── How it works strip ── */}
+  <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-slate-500 mb-8 animate-fade-in">
+    {[
+      { n: "1", label: "Import customer data" },
+      { n: "2", label: "Describe your goal" },
+      { n: "3", label: "AIRA picks the right customers" },
+      { n: "4", label: "AI writes the messages" },
+      { n: "5", label: "Sends via preferred channel" },
+      { n: "6", label: "Track opens, clicks, conversions" },
+    ].map((step, i, arr) => (
+      <Fragment key={step.n}>
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded-full border border-purple-800/60 bg-purple-950/40 text-purple-400 font-bold flex items-center justify-center text-[9px]">{step.n}</span>
+          <span className="text-slate-400">{step.label}</span>
+        </span>
+        {i < arr.length - 1 && <span className="text-slate-700 hidden sm:inline">→</span>}
+      </Fragment>
+    ))}
   </div>
 
   {/* ============================================================
       AI BUSINESS ONBOARDING PORTAL (Inputs, Intelligence Report)
       ============================================================ */}
-  {(isIdle || isThinking) && (
-    <BusinessOnboardingPortal onImportSuccess={setImportResult} />
+  <div data-tour="onboarding-portal">
+    <BusinessOnboardingPortal
+      importResult={importResult}
+      onImportSuccess={setImportResult}
+    />
+  </div>
+
+  {importResult && (
+    <div data-tour="customer-spotlight">
+      <TopCustomerSpotlight
+        importResult={importResult}
+        onCustomerChange={setSelectedSpotlightCustomer}
+      />
+    </div>
   )}
 
-  {(isIdle || isThinking) && importResult && (
-    <TopCustomerSpotlight importResult={importResult} />
+  {/* ============================================================
+      ACTIVE SEGMENT ROUTING PIPELINE EXPLORER
+      ============================================================ */}
+  {importResult && (
+    <SegmentRoutingPipelineSimulation
+      importResult={importResult}
+      selectedCustomer={selectedSpotlightCustomer}
+      goalText={goalText}
+    />
   )}
 
 {/* ——— VIEWPORT 3: Goal Input Section ——— */}
@@ -1358,13 +1968,13 @@ export default function HomePage() {
     <div className="text-center mb-6">
       <div className="inline-flex items-center gap-2 bg-purple-500/20 border border-purple-500/40 px-4 py-1.5 rounded-full mb-3">
         <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-        <span className="text-[11px] font-mono tracking-wider text-purple-300 uppercase font-bold">Main Engine</span>
+        <span className="text-[11px] font-mono tracking-wider text-purple-300 uppercase font-bold">Step 2 — Tell AIRA what you want to do</span>
       </div>
       <h2 className="text-2xl md:text-3xl font-bold text-white">
-        Campaign <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Goal</span>
+        What&apos;s your <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">campaign goal?</span>
       </h2>
       <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-        Type your objective — AIRA handles the rest
+        Write it in plain English — AIRA identifies the right customers, writes personalized messages, and sends them.
       </p>
     </div>
     
@@ -1376,9 +1986,9 @@ export default function HomePage() {
         : "border-purple-500/30 hover:border-purple-500/60 hover:shadow-[0_0_30px_rgba(99,102,241,0.1)]"
     )}>
       
-      <div className="flex items-center gap-2 text-xs font-mono text-purple-400 font-bold uppercase tracking-widest mb-3">
-        <span className="text-base">🧠</span> 
-        <span>TRY AIRA - ENTER YOUR CAMPAIGN GOAL  </span>
+      <div className="flex items-center gap-2.5 text-xs font-mono text-purple-400 font-bold uppercase tracking-widest mb-3">
+        <Brain size={13} className="text-purple-400 animate-pulse" />
+        <span>Describe your campaign goal in plain English</span>
         <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse ml-1" />
       </div>
 
@@ -1422,7 +2032,7 @@ export default function HomePage() {
       />
 
       {/* Footer Row Inside Textarea Area */}
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-800">
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-850">
         <div className="flex gap-2 flex-wrap">
           {isIdle &&
             EXAMPLE_GOALS.slice(0, 2).map((eg, i) => (
@@ -1430,9 +2040,10 @@ export default function HomePage() {
                 key={i}
                 type="button"
                 onClick={() => handleTextareaChange(eg)}
-                className="text-xs text-slate-400 hover:text-purple-300 border border-slate-700 hover:border-purple-500 rounded-full px-3 py-1.5 transition-all"
+                className="text-xs text-slate-400 hover:text-purple-300 border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-full px-3 py-1.5 transition-all flex items-center gap-1.5"
               >
-                {eg.slice(0, 38)}…
+                <Sparkles size={10} className="text-purple-500/60" />
+                <span>{eg.slice(0, 40)}…</span>
               </button>
             ))}
         </div>
@@ -1465,7 +2076,7 @@ export default function HomePage() {
           "w-full font-bold text-lg transition-all duration-200",
           "flex items-center justify-center gap-3 h-16 border border-white/15",
           goalText.trim() && !isThinking
-            ? "text-white glow-accent hover:scale-[1.02] active:scale-[0.98]"
+            ? "text-white glow-accent hover:scale-[1.02] active:scale-[0.98] btn-nudge"
             : "text-slate-400 cursor-not-allowed"
         )}
       >
@@ -1493,7 +2104,7 @@ export default function HomePage() {
       <div className="w-full mt-4 bg-slate-950 border border-purple-500/30 rounded-xl shadow-2xl max-h-64 overflow-y-auto custom-scrollbar divide-y divide-purple-900/30 animate-fade-in">
         <div className="bg-purple-950/30 px-4 py-2.5 text-xs text-purple-300 font-mono font-bold uppercase tracking-wider flex items-center gap-2">
           <Sparkles size={12} />
-          {dropdownMatches.length} matching parameters found • Use ↑ ↓ Enter
+          {dropdownMatches.length} suggestion{dropdownMatches.length !== 1 ? "s" : ""} · ↑ ↓ to navigate · Enter to use
         </div>
         {dropdownMatches.map((suggestion, idx) => (
           <button
@@ -1609,171 +2220,9 @@ export default function HomePage() {
           </section>
         )}
 
-{/* ── VIEWPORT 2: Live Horizontal Pipeline Diagram Architecture ── (COMMENTED OUT) */}
-{false && (
-<section data-tour="pipeline-diagram" className="min-h-[90vh] flex flex-col justify-center py-12 border-b border-slate-900/60 snap-start text-left">
-  <div className="space-y-2 mb-8">
-    <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono flex items-center gap-2">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-      Live Pipeline Simulation Deck
-    </h3>
-    <p className="text-xs text-slate-500 font-mono">
-      Contextual routing engine · {pipeline.engineStatus}
-    </p>
-    <div className="flex flex-wrap gap-4 text-[10px] font-mono text-slate-600">
-      <span>Target Segment Match: <span className="text-emerald-400">250 customers</span></span>
-      <span>Flowchart Transaction Ingestion: <span className="text-indigo-400">1,200 orders</span></span>
-    </div>
-  </div>
 
-  <div className="grid grid-cols-12 gap-3 lg:gap-4 items-stretch relative">
-    {/* Connector rail */}
-    <div className="hidden lg:block absolute top-1/2 left-[26%] right-[34%] h-px bg-gradient-to-r from-indigo-500/40 via-violet-400/60 to-emerald-400/40 -translate-y-1/2 pointer-events-none" />
 
-    {/* Column A — Refactored Dynamic User Node */}
-    <div className="col-span-12 lg:col-span-3 p-5 rounded-2xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-sm relative flex flex-col justify-between">
-      <div>
-        <div className="flex items-center justify-between border-b border-slate-900 pb-2 mb-4">
-          <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">User</p>
-          <span className="text-[9px] font-mono bg-purple-950/40 text-purple-400 border border-purple-900/30 px-1.5 py-0.5 rounded">Context Match</span>
-        </div>
-
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] text-white border border-red-400/20 flex items-center justify-center font-bold text-lg shadow-lg shadow-red-900/40">
-            {/* REMOVED ', customers' TO FIX SCOPE ERRORS */}
-            {getContextualCustomer(goalText)?.name?.charAt(0) || "U"}
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-100 text-sm">
-              {getContextualCustomer(goalText)?.name || "Anonymous User"}
-            </h4>
-            <span className="text-[10px] text-slate-500 font-mono">
-              {getContextualCustomer(goalText)?.city || "India"} · {getContextualCustomer(goalText)?.tier || "Standard"}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-2 text-[11px] font-mono text-slate-400 mb-4">
-          <p>Lifetime Value: <span className="text-emerald-400 font-bold">₹{getContextualCustomer(goalText)?.totalSpent?.toLocaleString() || 0}</span></p>
-          <p>Total Orders: <span className="text-indigo-300 font-bold">{getContextualCustomer(goalText)?.orderCount || 0} purchases</span></p>
-          <p>Account Status: <span className="text-violet-300 uppercase text-[10px]">{getContextualCustomer(goalText)?.status || "Active"}</span></p>
-        </div>
-      </div>
-
-      <div className="text-[10px] font-mono px-2 py-1.5 rounded-lg border border-amber-800/40 bg-amber-950/30 text-amber-300 mt-auto">
-        Insight: Dynamic segment match verified from 250-row cohort tracking matrix.
-      </div>
-      
-      {/* Structural layout connection point node */}
-      <div className="hidden lg:flex absolute -right-2 top-1/2 w-4 h-4 rounded-full bg-violet-500/80 border-2 border-slate-950 -translate-y-1/2 z-10" />
-    </div>
-
-    {/* Column B — Behavior Timeline & Insights */}
-    <div className="col-span-12 lg:col-span-3 p-5 rounded-2xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-sm relative space-y-4">
-      <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Behavior Track</p>
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
-        <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Audience Insights</p>
-        <ul className="space-y-1.5">
-          {pipeline.insights.map((item) => (
-            <li key={item} className="flex items-center gap-2 text-[11px] text-slate-300 font-mono">
-              <CheckCircle2 size={10} className="text-emerald-400 flex-shrink-0" />
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
-        <p className="text-[10px] font-mono text-slate-500 uppercase mb-3">Behavior Timeline</p>
-        <div className="space-y-3">
-          {pipeline.timeline.map((tick, i) => (
-            <div key={tick.label} className="flex items-start gap-2 relative">
-              <div className="flex flex-col items-center">
-                <div className="w-2 h-2 rounded-full bg-indigo-400 ring-2 ring-indigo-900" />
-                {i < pipeline.timeline.length - 1 && (
-                  <div className="w-px h-6 bg-indigo-800/60 mt-1" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-slate-200 font-mono leading-tight">{tick.label}</p>
-                <p className="text-[9px] text-slate-500 font-mono">{tick.time}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="hidden lg:flex absolute -right-2 top-1/2 w-4 h-4 rounded-full bg-violet-500/80 border-2 border-slate-950 -translate-y-1/2 z-10" />
-    </div>
-
-    {/* Column C — AIRA Decision Layer Core */}
-    <div className="col-span-12 lg:col-span-2 flex flex-col items-center justify-center p-4 relative">
-      <div className="relative w-full max-w-[140px] aspect-square flex items-center justify-center">
-        {/* Breathing ambient halo */}
-        <div className="absolute top-1/2 left-1/2 w-36 h-36 rounded-full bg-indigo-500/10 blur-xl animate-breathing-aura" />
-        
-        {/* Outer Rotating Dotted Ring */}
-        <div className="absolute inset-0 rounded-full border border-dashed border-indigo-500/30 animate-spin-slow" />
-        
-        {/* Middle Rotating Segmented Ring */}
-        <div className="absolute inset-2 rounded-full border-2 border-double border-violet-400/40 animate-spin-reverse-slow" />
-        
-        {/* Inner static border */}
-        <div className="absolute inset-4 rounded-full border border-fuchsia-500/20" />
-        
-        {/* Core glowing orb */}
-        <div className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.45)] border border-white/15 hover:scale-105 transition-transform duration-300 cursor-pointer">
-          <Brain size={28} className="text-white animate-pulse" />
-        </div>
-      </div>
-      <p className="mt-4 text-[10px] font-mono text-center text-indigo-300 uppercase tracking-wider leading-relaxed">
-        AIRA Decision<br />Layer Core
-      </p>
-      <p className="mt-1 text-[9px] font-mono text-slate-500 text-center max-w-[120px]">
-        {pipeline.engineStatus}
-      </p>
-      <div className="hidden lg:flex absolute -right-2 top-1/2 w-4 h-4 rounded-full bg-emerald-500/80 border-2 border-slate-950 -translate-y-1/2 z-10" />
-    </div>
-
-    {/* Column D — Channel Destination Stack */}
-    <div className="col-span-12 lg:col-span-4 p-5 rounded-2xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-sm space-y-3">
-      <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Channel Destinations</p>
-      {pipeline.channels.map((card) => {
-        const Icon = card.type === "email" ? Mail : card.type === "whatsapp" ? Send : Phone;
-        const colorClass =
-          card.type === "email"
-            ? "border-blue-800/50 bg-blue-950/30"
-            : card.type === "whatsapp"
-            ? "border-emerald-800/50 bg-emerald-950/30"
-            : "border-green-800/50 bg-green-950/30";
-        const labelClass =
-          card.type === "email"
-            ? "text-blue-300"
-            : card.type === "whatsapp"
-            ? "text-emerald-300"
-            : "text-green-300";
-        return (
-          <div key={card.type} className={cn("rounded-xl border p-3", colorClass)}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={cn("text-[10px] font-mono uppercase font-bold flex items-center gap-1", labelClass)}>
-                <Icon size={11} />
-                {card.type}
-              </span>
-              <div className="w-10 h-10 rounded-lg border border-white/10 bg-slate-900/60 flex items-center justify-center text-[8px] font-mono text-slate-500 text-center leading-tight px-1">
-                {card.productLabel}
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-300 font-mono leading-relaxed">
-              &ldquo;{card.message}&rdquo;
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  </div>
-</section>
-)}
-
-{/* Deep immersion space transition padding to clear fold layers before goal panel */}
-<div className="h-[20vh] w-full" />
+<div className="h-8 w-full" />
 
 
         {/* ── Review Sections (Audience + Messages + Channel) ───────────────── */}
@@ -1915,10 +2364,10 @@ export default function HomePage() {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-semibold text-text-primary mb-1">
-                    Dispatching to Channel Service…
+                    Sending to the channel service…
                   </p>
                   <p className="text-xs text-text-muted">
-                    Queuing messages · Simulating delivery · Computing analytics
+                    Creating message records · dispatching to recipients · waiting for delivery callbacks
                   </p>
                 </div>
               </div>
@@ -1929,7 +2378,7 @@ export default function HomePage() {
         {/* ── Analytics & Live Telemetry Results ───────────────────────────── */}
         {isResults && analytics && (
           <section className="space-y-6 animate-slide-up">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="w-6 h-6 rounded-lg bg-success/20 flex items-center justify-center">
                 <BarChart3 size={13} className="text-success" />
               </div>
@@ -1939,23 +2388,48 @@ export default function HomePage() {
               <span className="ml-2 text-xs bg-success/10 border border-success/20 text-success px-2.5 py-0.5 rounded-full">
                 Active
               </span>
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 bg-emerald-950/30 border border-emerald-800/50 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                Live — updating every 2.5s
+              </span>
             </div>
 
-            {/* Asynchronous Live Network Callback Monitor */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary uppercase tracking-wider pl-1">
-                <TerminalIcon size={12} className="text-amber-500" />
-                Live Network Telemetry Stream
+            {/* Live Delivery Terminal */}
+            <div className="space-y-4">
+              {/* Two-service explanation — clean, no button */}
+              <div className="rounded-xl border border-slate-800/70 bg-slate-900/40 px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                  <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">Two-Service Callback Loop</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                  When a campaign launches, the CRM posts each message to a <span className="text-emerald-400">separate channel service</span>. That service simulates delivery outcomes and calls back into <code className="text-slate-400 font-mono bg-slate-950/60 px-1 rounded">/api/receipts</code> — updating delivered, opened, and clicked counts asynchronously, exactly how real channel delivery works.
+                </p>
+                <p className="text-[10px] font-mono text-slate-500">
+                  Channel service deployed at <span className="text-slate-400">api.aira-channel-service.onrender.com</span> · accepts <span className="text-slate-400">POST /dispatch</span>
+                </p>
               </div>
+
+              <div className="flex items-center gap-2 pl-1 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                <TerminalIcon size={12} className="text-amber-500" />
+                Live Delivery Feed
+              </div>
+
               <CallbackTerminal
                 isCampaignActive={isResults}
+                campaignId={campaign?.id ?? null}
                 matchedCustomerIds={campaign?.audience?.matchedCustomerIds || []}
               />
             </div>
 
             {/* Structured Analytics Metric Panes */}
-            <div className="w-full">
+            <div className="w-full space-y-3">
               <AnalyticsPanel analytics={analytics} />
+              {analytics.computedAt && (
+                <p className="text-[10px] text-slate-600 font-mono text-right">
+                  Last updated: {new Date(analytics.computedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                </p>
+              )}
             </div>
 
           </section>
@@ -1968,11 +2442,10 @@ export default function HomePage() {
             <button
               type="button"
               onClick={launchCampaign}
-              className="w-full py-4 rounded-xl font-semibold text-base bg-gradient-to-r from-accent via-indigo-500 to-violet-600 hover:from-accent-bright hover:via-indigo-400 hover:to-violet-500 text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] glow-accent flex items-center justify-center gap-2 border border-white/10 shadow-lg shadow-indigo-900/30"
+              className="btn-nudge w-full py-4 rounded-xl font-semibold text-base bg-gradient-to-r from-accent via-indigo-500 to-violet-600 hover:from-accent-bright hover:via-indigo-400 hover:to-violet-500 text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] glow-accent flex items-center justify-center gap-2 border border-white/10 shadow-lg shadow-indigo-900/30 font-mono text-sm uppercase tracking-wider"
             >
-              <span aria-hidden>🚀</span>
-              Approve & Ingest Telemetry Deployment Matrix
-              <ArrowRight size={16} />
+              Confirm & Send Campaign
+              <ArrowRight size={16} className="animate-pulse" />
             </button>
           )}
           {isReview && campaign && (
@@ -1993,30 +2466,62 @@ export default function HomePage() {
           <button
             type="button"
             onClick={reset}
-            className="w-full py-3 rounded-xl text-sm font-medium border border-border bg-surface hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center gap-2 font-mono"
+            className="w-full py-3 rounded-xl text-sm font-bold border border-purple-800/50 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 hover:text-purple-100 transition-all flex items-center justify-center gap-2 font-mono uppercase tracking-wider shadow-[0_0_16px_rgba(168,85,247,0.1)] hover:shadow-[0_0_24px_rgba(168,85,247,0.2)]"
           >
-            <span aria-hidden>🔄</span>
-            Start Over with a New Campaign Goal
-            <RefreshCw size={14} className="opacity-60" />
+            <RefreshCw size={14} />
+            Start Over — New Campaign Goal
           </button>
         </section>
       )}
 
-      {/* Ambient Theme Configuration Switch Toggle Button */}
-      <div className="fixed top-24 right-4 z-50 pointer-events-auto">
+      {/* Right-Rail Consolidated Sidebar Controls Toolbar */}
+      <div data-tour="control-toolbar" className="fixed right-0 top-[35%] z-50 flex flex-col items-end gap-3 pointer-events-auto">
+        {/* What AIRA Did Trigger */}
         <button
-          onClick={toggleTheme}
-          className="p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200 transition-all shadow-2xl flex items-center justify-center font-mono text-sm"
-          title="Toggle system interface layout theme mode"
+          type="button"
+          onClick={() => setIsObservabilityOpen(!isObservabilityOpen)}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-l-xl border border-r-0 border-indigo-800/60 bg-indigo-950/60 font-mono text-xs text-indigo-300 hover:text-white transition-all hover:bg-indigo-900/60 shadow-2xl group"
+          title="See every decision AIRA made — segment picked, channel chosen, messages written"
         >
-          {themeMode === "dark" ? "☀️" : "🌙"}
+          <TerminalIcon size={14} className={cn("text-indigo-400 group-hover:scale-110 transition-transform", isObservabilityOpen && "animate-pulse")} />
+          <span className="hidden sm:inline font-bold">What AIRA Did</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
         </button>
+
+        {/* Issues I Faced Trigger */}
+        <button
+          type="button"
+          onClick={() => setIsWarLogsOpen(!isWarLogsOpen)}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-l-xl border border-r-0 border-amber-800/60 bg-amber-950/40 font-mono text-xs text-amber-300 hover:text-white transition-all hover:bg-amber-900/40 shadow-2xl group"
+          title="See build errors and known issues"
+        >
+          <AlertCircle size={14} className="text-amber-400 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline font-bold">Issues I Faced</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        </button>
+
+        {/* Campaign History Trigger */}
+        {pastCampaigns.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-l-xl border border-r-0 border-emerald-800/60 bg-emerald-950/40 font-mono text-xs text-emerald-300 hover:text-white transition-all hover:bg-emerald-900/40 shadow-2xl group"
+            title="View all past campaigns"
+          >
+            <BarChart3 size={14} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span className="hidden sm:inline font-bold">Campaign History</span>
+            <span className="text-[10px] bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 rounded-full px-1.5 font-bold">{pastCampaigns.length}</span>
+          </button>
+        )}
+
       </div>
 
       <div data-tour="observability-stack">
         <TelemetryDashboard 
           currentCampaign={campaign}
           currentAnalytics={analytics}
+          isOpen={isObservabilityOpen}
+          setIsOpen={setIsObservabilityOpen}
           onRestoreSnapshot={(savedCampaign, savedAnalytics) => {
             setCampaign(savedCampaign);
             setAnalytics(savedAnalytics);
@@ -2033,166 +2538,19 @@ export default function HomePage() {
       <div data-tour="showcase-sections" className="w-full space-y-12 mt-12 animate-fade-in">
         <AchievementsSection />
         <AIRoadmapSection />
+
+        {/* ── About the Builder (collapsible) ── */}
+        <BuilderDossier />
+
         <KnownLimitationsSection />
       </div>
 
-      {/* ============================================================
-          SECTION 1: ULTRA-PREMIUM FULL-SCREEN BUILDER DOSSIER (100vh Takeover)
-          ============================================================ */}
-      <section className="w-full min-h-screen xl:h-screen bg-slate-950/80 relative flex flex-col justify-center items-center overflow-hidden py-16 px-4 md:px-12 border-t border-slate-900/80">
-        
-        {/* Decorative Grid Overlay with radial vignette fade */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_60%,transparent_100%)] opacity-20 pointer-events-none" />
 
-        <div className="relative z-10 w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
-          {/* Large Left Interactive Avatar Column */}
-          <div className="lg:col-span-4 flex flex-col items-center text-center space-y-4">
-          <div className="relative group">
-  <div className="absolute -inset-1.5 bg-gradient-to-r from-purple-600 via-rose-500 to-indigo-500 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-500 animate-tilt" />
-  <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden shadow-2xl">
-  <img 
-  src="/aira-new.jpg" 
-  alt="Aira K. Salish" 
-  className="w-full h-full object-cover"
-/>
-  </div>
-</div>
-            <div>
-              <span className="text-[10px] font-mono tracking-[0.25em] bg-purple-950/50 border border-purple-800/40 text-purple-300 px-3 py-1 rounded-full uppercase font-bold">
-                AI/ML Student
-              </span>
-              <p className="text-[10px] font-mono text-slate-500 mt-2">SRMIST · Dept of CSE (AI/ML)</p>
-            </div>
-          </div>
 
-          {/* Expanded Rich Dossier Text Column — PUNCHY & SOPHISTICATED */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Ultra-Premium Header Terminal Interface */}
-            <div className="border-b border-slate-900/80 pb-5 space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div className="space-y-1.5">
-                  <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                    Aira K Salish
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                    <p className="text-xs font-mono text-purple-400 font-bold tracking-[0.2em] uppercase">
-                      System Operator // Intent Architect
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Meta ID Tag */}
-                <div className="bg-slate-900/40 border border-slate-800 px-3 py-1.5 rounded-lg backdrop-blur-sm select-none">
-                  <span className="text-[10px] font-mono text-slate-500 tracking-wider uppercase block text-right">Operator Node</span>
-                  <span className="text-[11px] font-mono text-slate-300 font-bold tracking-wide">RA2311026011017</span>
-                </div>
-              </div>
-              
-              {/* Premium Interactive Social Pill Navigation */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest mr-2">Networks:</span>
-                
-                <a 
-                  href="https://linkedin.com/in/airasalish" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="px-2.5 py-1 rounded-md font-mono text-[11px] text-slate-400 border border-slate-900 bg-slate-950/40 hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-950/10 transition-all duration-200"
-                >
-                  linkedin
-                </a>
-                
-                <a 
-                  href="https://github.com/ayerahh" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="px-2.5 py-1 rounded-md font-mono text-[11px] text-slate-400 border border-slate-900 bg-slate-950/40 hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-950/10 transition-all duration-200"
-                >
-                  github
-                </a>
-                
-                <a 
-                  href="https://instagram.com/aira.kivy" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="px-2.5 py-1 rounded-md font-mono text-[11px] text-slate-400 border border-slate-900 bg-slate-950/40 hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-950/10 transition-all duration-200"
-                >
-                  instagram
-                </a>
-              </div>
-            </div>
 
-            {/* Tightened High-Contrast Directory */}
-            <ul className="space-y-2.5 font-mono text-xs text-slate-300 leading-relaxed max-w-3xl">
-  <li>
-    <span className="text-purple-500 font-bold mr-2">▪</span>
-    <strong>Academic Track:</strong> B.Tech CSE student specializing in <span className="text-emerald-400/80">AI & ML</span> at SRMIST.
-  </li>
-  <li>
-    <span className="text-purple-500 font-bold mr-2">▪</span>
-    <strong>Leadership:</strong> Technical Lead (AI/ML) at <span className="text-rose-400/80">ACM Women (ACMW)</span>.
-  </li>
-  <li>
-    <span className="text-purple-500 font-bold mr-2">▪</span>
-    <strong>Industry Core:</strong> Former Prompt Engineering Intern at <span className="text-emerald-400/80">BabyBillion Pvt. Ltd.</span>
-  </li>
-  <li>
-    <span className="text-purple-500 font-bold mr-2">▪</span>
-    <strong>Executive Benchmarks:</strong> Worked under <span className="text-emerald-400/80">Dinesh Godara</span> (former VP at Unacademy, founder of BabyBillion).
-  </li>
-  <li>
-    <span className="text-purple-500 font-bold mr-2">▪</span>
-    <strong>Shipped Production:</strong> <span className="text-rose-400/80">Generative AI Researcher</span> for the Spotted app (founded by Amit Baradia).
-  </li>
-  <li>
-    <span className="text-purple-500 font-bold mr-2">▪</span>
-    <strong>Open Source & FinTech:</strong> Contributor via <span className="text-emerald-400/80">GSSoC</span> · Graduate of <span className="text-emerald-400/80">CitiBridge</span> Program 2026 by Citibank.
-  </li>
-</ul>
-            {/* Vision Footer */}
-            <div className="pt-3 border-t border-slate-900/60 text-slate-400 text-[11px] font-mono space-y-1">
-              <div><span className="text-slate-600 mr-2">→</span><strong>Focus:</strong> Autonomous AI agents, intelligent automation, and failsafe tech layers.</div>
-              <div><span className="text-slate-600 mr-2">→</span><strong>Vision:</strong> Engineering abstract concepts into products with real-world impact.</div>
-            </div>
-
-            <blockquote className="border-l-2 border-purple-500 bg-purple-950/10 rounded-r-xl px-4 py-2.5 italic text-xs text-slate-400 font-mono max-w-2xl">
-              "Building AI agents and systems that bridge the gap between abstract innovation and deterministic execution."
-            </blockquote>
-          </div>
-
-        </div>
-      </section>
-
-      
 
       {/* ============================================================
-          FLOATING TOGGLE BUTTON (With Speech-Bubble Pointer Tail)
-          ============================================================ */}
-      <div className="fixed bottom-36 right-6 z-50 flex flex-row-reverse items-center gap-3">
-        
-        {/* The Core Floating Circle Button Asset */}
-        <button
-          onClick={() => setIsWarLogsOpen(!isWarLogsOpen)}
-          className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-rose-600 shadow-lg shadow-purple-500/30 hover:scale-110 transition-all duration-200 flex items-center justify-center group outline-none flex-shrink-0"
-        >
-          <span className="text-xl group-hover:rotate-12 transition-transform">📋</span>
-        </button>
-
-        {/* Descriptive Text Pill with a Right-Pointing Speech Tail */}
-        <div className="relative bg-slate-950/90 backdrop-blur-md border border-slate-800 text-slate-200 font-mono text-[11px] font-bold px-3 py-2 rounded-xl shadow-2xl tracking-tight select-none whitespace-nowrap animate-pulse">
-          ⚡ See Errors / Problems Faced
-          
-          {/* ── THE CSS POINTER TAIL ── */}
-          <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[6px] border-l-slate-800">
-            <div className="absolute top-1/2 left-[-7px] -translate-y-1/2 w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[5px] border-l-slate-950" />
-          </div>
-        </div>
-
-      </div>
-
-      {/* ============================================================
-         COLLAPSIBLE RIGHT SIDEBAR - BUILD WAR LOGS
+         COLLAPSIBLE RIGHT SIDEBAR - ISSUES I FACED
          ============================================================ */}
       <div
         className={`fixed top-0 right-0 h-full w-full max-w-md bg-black/95 backdrop-blur-xl border-l border-purple-500/30 shadow-2xl shadow-purple-500/20 z-50 transition-transform duration-300 ease-out ${
@@ -2203,11 +2561,11 @@ export default function HomePage() {
         <div className="flex items-center justify-between p-5 border-b border-purple-500/30 bg-gradient-to-r from-purple-950/50 to-transparent">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-rose-600 flex items-center justify-center">
-              <span className="text-sm">📋</span>
+              <AlertCircle size={15} className="text-white animate-pulse" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Build War Logs</h3>
-              <p className="text-[10px] text-purple-400">30 battles · 72 hours · 1 winner</p>
+              <h3 className="font-semibold text-white">Issues I Faced</h3>
+              <p className="text-[10px] text-purple-400">real problems, real fixes · 72 hours of building</p>
             </div>
           </div>
           <button
@@ -2250,6 +2608,91 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ============================================================
+          CAMPAIGN HISTORY DRAWER
+          ============================================================ */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-black/95 backdrop-blur-xl border-l border-emerald-500/30 shadow-2xl shadow-emerald-500/10 z-50 transition-transform duration-300 ease-out ${
+          isHistoryOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between p-5 border-b border-emerald-500/30 bg-gradient-to-r from-emerald-950/50 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
+              <BarChart3 size={15} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">Campaign History</h3>
+              <p className="text-[10px] text-emerald-400">{pastCampaigns.length} campaigns launched this session</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsHistoryOpen(false)}
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center text-slate-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="h-[calc(100%-80px)] overflow-y-auto p-4 space-y-3">
+          {pastCampaigns.map((c, idx) => {
+            const isActive = c.id === campaign?.id;
+            const a = c.analytics;
+            return (
+              <div
+                key={c.id}
+                className={cn(
+                  "rounded-xl border p-4 transition-all",
+                  isActive
+                    ? "border-emerald-500/40 bg-emerald-950/30"
+                    : "border-slate-800/70 bg-slate-900/40"
+                )}
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{c.name}</p>
+                    <p className="text-[10px] text-slate-500 font-mono truncate mt-0.5">{c.goalText}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {isActive && (
+                      <span className="text-[9px] bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">Live</span>
+                    )}
+                    <span className={cn(
+                      "text-[9px] px-1.5 py-0.5 rounded font-mono uppercase tracking-wider border",
+                      CHANNEL_COLORS[c.chosenChannel]
+                    )}>{c.chosenChannel}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mt-3">
+                  {[
+                    { label: "Targeted", value: c.audience.estimatedSize },
+                    { label: "Delivered", value: a?.delivered ?? "—" },
+                    { label: "Opened", value: a?.opened ?? "—" },
+                    { label: "Clicked", value: a?.clicked ?? "—" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="text-center">
+                      <p className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">{label}</p>
+                      <p className="text-sm font-bold text-white mt-0.5">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                {a && (
+                  <div className="mt-2.5 h-1 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.round(a.deliveryRate * 100)}%` }}
+                    />
+                  </div>
+                )}
+                <p className="text-[9px] text-slate-600 font-mono mt-1.5">
+                  {new Date(c.createdAt).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
+                  {a ? ` · ${Math.round(a.deliveryRate * 100)}% delivery` : ""}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 2026 Welcome Modal for first-time users */}
       {showWelcomeModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 animate-fade-in">
@@ -2259,8 +2702,8 @@ export default function HomePage() {
             
             <div className="flex flex-col items-center text-center relative z-10">
               {/* Brand mark */}
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] flex items-center justify-center text-3xl shadow-lg shadow-red-950/50 border border-red-400/20 mb-6 animate-bounce">
-                <span>🍓</span>
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] flex items-center justify-center shadow-lg shadow-red-950/50 border border-red-400/20 mb-6 animate-bounce">
+                <Sparkles size={28} className="text-white animate-pulse" />
               </div>
               
               <h2 className="text-2xl font-black text-white tracking-tight mb-3">
@@ -2271,18 +2714,19 @@ export default function HomePage() {
               </p>
               
               <p className="text-slate-300 text-sm leading-relaxed mb-8 max-w-sm">
-                Describe your business goal in natural language. AIRA will automatically model customer segments, draft message copies, configure channels, and start real-time simulated telemetry logs.
+                Describe what you want to achieve. AIRA segments your customers, writes the messages, picks the right channel for each person, and shows you live delivery results.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
+                  type="button"
                   onClick={() => {
                     setShowWelcomeModal(false);
                     setGuidedDemo(true);
                   }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white transition-all duration-200 shadow-lg shadow-purple-900/30 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  🚀 Yes, Start Guided Tour
+                  Yes, Start Guided Tour
                 </button>
                 <button
                   onClick={() => {
@@ -2308,10 +2752,10 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-900">
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                <span className="text-purple-500">⚡</span> Data Ingestion Portal
+                Data Ingestion Portal
               </h2>
               <p className="text-xs text-text-muted mt-1 font-mono">
-                Simulate bulk CRM imports for testing segment filters and telemetry logs.
+                Paste or upload your customer list — AIRA uses it to segment, score, and target your campaign.
               </p>
             </div>
             
@@ -2406,7 +2850,7 @@ export default function HomePage() {
           </div>
           {importCustomerCount * importOrdersPerCustomer > 500 && (
             <p className="text-[10px] text-rose-400 mt-2 font-mono">
-              ⚠️ Exceeds limit: Max 500 total orders per import (current: {importCustomerCount * importOrdersPerCustomer}).
+              Limit Exceeded: Max 500 total orders per import (current: {importCustomerCount * importOrdersPerCustomer}).
             </p>
           )}
         </div>

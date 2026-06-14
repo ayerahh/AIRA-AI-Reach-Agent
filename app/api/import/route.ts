@@ -546,7 +546,8 @@ export async function POST(req: Request) {
       duplicatesSkipped,
       totalCustomers: storeCustomers.length,
       totalOrders: storeOrders.length,
-      preview
+      preview,
+      importedCustomers: storeCustomers
     });
 
   } catch (error: unknown) {

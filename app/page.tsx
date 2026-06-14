@@ -122,11 +122,11 @@ const CHANNEL_COLORS: Record<CampaignChannel, string> = {
 };
 
 // Example goal prompts for quick-fill
-const EXAMPLE_GOALS = [
-  "Re-engage customers who haven't bought in 90+ days with a personalized discount",
-  "Drive repeat purchases from our Gold-tier members with an exclusive early access offer",
-  "Convert first-time buyers into loyal customers by highlighting our loyalty programme",
-  "Win back lapsed platinum customers before the end-of-season sale",
+const EXAMPLE_GOALS: { label: string; text: string }[] = [
+  { label: "Win-back lapsed customers", text: "Re-engage customers who haven't bought in 90+ days with a personalized discount" },
+  { label: "VIP early access", text: "Drive repeat purchases from our Gold-tier members with an exclusive early access offer" },
+  { label: "Convert first-timers", text: "Convert first-time buyers into loyal customers by highlighting our loyalty programme" },
+  { label: "Platinum win-back", text: "Win back lapsed platinum customers before the end-of-season sale" },
 ];
 
 interface PipelineChannelCard {
@@ -1717,7 +1717,7 @@ export default function HomePage() {
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500/10 to-rose-500/10 border border-purple-500/20 px-3.5 py-1.5 rounded-full backdrop-blur-md">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               <span className="text-[10px] font-mono tracking-[0.35em] uppercase text-slate-300 font-bold">
-                AI-Native Customer Reach Platform
+                AI-Native CRM Platform
               </span>
             </div>
             
@@ -1726,7 +1726,7 @@ export default function HomePage() {
             </h1>
             
             <p className="text-xs font-mono text-slate-400 tracking-wider max-w-md mx-auto leading-relaxed">
-              Type a campaign goal in plain English. AIRA segments your customers, writes the messages, and dispatches them — then shows you exactly what happened.
+              Type a goal. AIRA finds the right customers, writes their messages, picks the best channel, and shows you live delivery results.
             </p>
 
             {/* Launch Console CTA and scroll down guide */}
@@ -1809,7 +1809,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 -mx-4 px-4 flex items-center justify-between py-4 header-glass mb-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] flex items-center justify-center shadow-lg shadow-red-950/50 flex-shrink-0 border border-red-400/20">
-            <Sparkles size={14} className="text-white animate-pulse" />
+            <span className="text-white text-base">🍓</span>
           </div>
           <div>
             <h2 className="font-bold text-white tracking-tight text-sm flex items-center gap-1.5">
@@ -1884,14 +1884,13 @@ export default function HomePage() {
     <div className="text-center mb-6">
       <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full mb-4">
         <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-        <span className="text-[10px] font-mono tracking-wider text-purple-400 uppercase">AIRA · AI-Native CRM · Xeno Engineering Take-Home 2026</span>
+        <span className="text-[10px] font-mono tracking-wider text-purple-400 uppercase">AIRA · AI Reach Agent · Campaign Engine</span>
       </div>
       <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight">
         One Prompt, <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Full Campaign</span>
       </h1>
       <p className="text-sm md:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-        Import your customer data, describe what you want to achieve, and AIRA picks the right customers,
-        writes the messages, sends them through the right channel, and shows you exactly what happens — delivered, opened, clicked.
+        Import a customer dataset, describe what you want to achieve, and AIRA handles the rest — segmentation, copywriting, channel routing, and live delivery tracking.
       </p>
     </div>
     
@@ -1936,12 +1935,12 @@ export default function HomePage() {
   {/* ── How it works strip ── */}
   <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-slate-500 mb-8 animate-fade-in">
     {[
-      { n: "1", label: "Import customer data" },
+      { n: "1", label: "Load customer data" },
       { n: "2", label: "Describe your goal" },
-      { n: "3", label: "AIRA picks the right customers" },
+      { n: "3", label: "AIRA builds the audience" },
       { n: "4", label: "AI writes the messages" },
-      { n: "5", label: "Sends via preferred channel" },
-      { n: "6", label: "Track opens, clicks, conversions" },
+      { n: "5", label: "Routed to preferred channel" },
+      { n: "6", label: "Live delivery tracking" },
     ].map((step, i, arr) => (
       <Fragment key={step.n}>
         <span className="flex items-center gap-1.5">
@@ -1991,13 +1990,13 @@ export default function HomePage() {
     <div className="text-center mb-6">
       <div className="inline-flex items-center gap-2 bg-purple-500/20 border border-purple-500/40 px-4 py-1.5 rounded-full mb-3">
         <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-        <span className="text-[11px] font-mono tracking-wider text-purple-300 uppercase font-bold">Step 2 — Tell AIRA what you want to do</span>
+        <span className="text-[11px] font-mono tracking-wider text-purple-300 uppercase font-bold">Step 2 — Describe your campaign goal</span>
       </div>
       <h2 className="text-2xl md:text-3xl font-bold text-white">
-        What&apos;s your <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">campaign goal?</span>
+        What do you want to <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">achieve?</span>
       </h2>
       <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-        Write it in plain English — AIRA identifies the right customers, writes personalized messages, and sends them.
+        Plain English works. AIRA will figure out who to reach, what to say, and how to send it.
       </p>
     </div>
     
@@ -2011,7 +2010,7 @@ export default function HomePage() {
       
       <div className="flex items-center gap-2.5 text-xs font-mono text-purple-400 font-bold uppercase tracking-widest mb-3">
         <Brain size={13} className="text-purple-400 animate-pulse" />
-        <span>Describe your campaign goal in plain English</span>
+        <span>Campaign goal</span>
         <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse ml-1" />
       </div>
 
@@ -2019,7 +2018,7 @@ export default function HomePage() {
         ref={textareaRef}
         value={goalText}
         onChange={(e) => handleTextareaChange(e.target.value)}
-        placeholder="Example: 'Re-engage customers who haven't purchased in 90 days with a 20% off personalized win-back offer'"
+        placeholder="e.g. Re-engage customers who haven't bought in 90 days with a 20% off win-back offer"
         className="w-full min-h-[160px] bg-slate-900/60 border-2 border-slate-700 rounded-xl p-5 text-base font-mono text-white placeholder-slate-500 outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/20 resize-none transition-all relative z-10"
         onKeyDown={(e) => {
           if (showDropdown && dropdownMatches.length > 0) {
@@ -2058,15 +2057,15 @@ export default function HomePage() {
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-850">
         <div className="flex gap-2 flex-wrap">
           {isIdle &&
-            EXAMPLE_GOALS.slice(0, 2).map((eg, i) => (
+            EXAMPLE_GOALS.slice(0, 3).map((eg, i) => (
               <button
                 key={i}
                 type="button"
-                onClick={() => handleTextareaChange(eg)}
+                onClick={() => handleTextareaChange(eg.text)}
                 className="text-xs text-slate-400 hover:text-purple-300 border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-full px-3 py-1.5 transition-all flex items-center gap-1.5"
               >
                 <Sparkles size={10} className="text-purple-500/60" />
-                <span>{eg.slice(0, 40)}…</span>
+                <span>{eg.label}</span>
               </button>
             ))}
         </div>
@@ -2110,12 +2109,12 @@ export default function HomePage() {
                 <span key={i} className="thinking-dot w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
               ))}
             </span>
-            <span className="text-base">AIRA is thinking...</span>
+            <span className="text-base">Thinking…</span>
           </>
         ) : (
           <>
             <Zap size={22} className="text-purple-300" />
-            <span className="text-base">Run AIRA</span>
+            <span className="text-base">Build Campaign</span>
             <ArrowRight size={18} className="text-purple-300" />
           </>
         )}
@@ -2180,12 +2179,12 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-text-primary">
-                    {isThinking ? "Agent Reasoning" : "Analysis Complete"}
+                    {isThinking ? "AIRA is reasoning" : "Analysis complete"}
                   </p>
                   <p className="text-xs text-text-muted">
                     {isThinking
                       ? `Step ${Math.min(currentStepIndex + 1, THINKING_STEPS.length)} of ${THINKING_STEPS.length}`
-                      : `${THINKING_STEPS.length} steps completed · ${
+                      : `All ${THINKING_STEPS.length} steps done · ${
                           campaign?.agentReasoning.processingTimeMs
                             ? `${(campaign.agentReasoning.processingTimeMs / 1000).toFixed(1)}s`
                             : "done"
@@ -2220,7 +2219,7 @@ export default function HomePage() {
               {campaign && !isThinking && (
                 <div className="mx-3 mb-3 p-4 bg-surface-2 rounded-xl border border-border animate-fade-in">
                   <p className="text-xs text-text-muted uppercase tracking-wider mb-2">
-                    Agent Summary
+                    What AIRA decided
                   </p>
                   <p className="text-sm text-text-secondary leading-relaxed">
                     {campaign.agentReasoning.goalSummary}
@@ -2310,7 +2309,7 @@ export default function HomePage() {
                   Message Variants
                 </h2>
                 <span className="ml-auto text-xs text-text-muted">
-                  Select a variant to use
+                  Pick one to send
                 </span>
               </div>
 
@@ -2387,10 +2386,10 @@ export default function HomePage() {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-semibold text-text-primary mb-1">
-                    Sending to the channel service…
+                    Dispatching campaign…
                   </p>
                   <p className="text-xs text-text-muted">
-                    Creating message records · dispatching to recipients · waiting for delivery callbacks
+                    Creating records · routing to channel service · awaiting delivery callbacks
                   </p>
                 </div>
               </div>
@@ -2413,7 +2412,7 @@ export default function HomePage() {
               </span>
               <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 bg-emerald-950/30 border border-emerald-800/50 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-                Live — updating every 2.5s
+                Updating live
               </span>
             </div>
 
@@ -2426,10 +2425,10 @@ export default function HomePage() {
                   <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">Two-Service Callback Loop</span>
                 </div>
                 <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                  When a campaign launches, the CRM posts each message to a <span className="text-emerald-400">separate channel service</span>. That service simulates delivery outcomes and calls back into <code className="text-slate-400 font-mono bg-slate-950/60 px-1 rounded">/api/receipts</code> — updating delivered, opened, and clicked counts asynchronously, exactly how real channel delivery works.
+                  On launch, the CRM dispatches each message to a <span className="text-emerald-400">separate channel service</span>. That service simulates delivery, then posts events back to <code className="text-slate-400 font-mono bg-slate-950/60 px-1 rounded">/api/receipts</code> — updating delivered, opened, and clicked counts in real time, mirroring how providers like Twilio and SendGrid work.
                 </p>
                 <p className="text-[10px] font-mono text-slate-500">
-                  Channel service deployed at <span className="text-slate-400">api.aira-channel-service.onrender.com</span> · accepts <span className="text-slate-400">POST /dispatch</span>
+                  Channel service → <span className="text-slate-400">api.aira-channel-service.onrender.com</span> · <span className="text-slate-400">POST /dispatch</span>
                 </p>
               </div>
 
@@ -2467,7 +2466,7 @@ export default function HomePage() {
               onClick={launchCampaign}
               className="btn-nudge w-full py-4 rounded-xl font-semibold text-base bg-gradient-to-r from-accent via-indigo-500 to-violet-600 hover:from-accent-bright hover:via-indigo-400 hover:to-violet-500 text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] glow-accent flex items-center justify-center gap-2 border border-white/10 shadow-lg shadow-indigo-900/30 font-mono text-sm uppercase tracking-wider"
             >
-              Confirm & Send Campaign
+              Launch Campaign
               <ArrowRight size={16} className="animate-pulse" />
             </button>
           )}
@@ -2492,7 +2491,7 @@ export default function HomePage() {
             className="w-full py-3 rounded-xl text-sm font-bold border border-purple-800/50 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 hover:text-purple-100 transition-all flex items-center justify-center gap-2 font-mono uppercase tracking-wider shadow-[0_0_16px_rgba(168,85,247,0.1)] hover:shadow-[0_0_24px_rgba(168,85,247,0.2)]"
           >
             <RefreshCw size={14} />
-            Start Over — New Campaign Goal
+            Start a New Campaign
           </button>
         </section>
       )}
@@ -2732,7 +2731,7 @@ export default function HomePage() {
             <div className="flex flex-col items-center text-center relative z-10">
               {/* Brand mark */}
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ef4444] to-[#ec4899] flex items-center justify-center shadow-lg shadow-red-950/50 border border-red-400/20 mb-6 animate-bounce">
-                <Sparkles size={28} className="text-white animate-pulse" />
+                <span className="text-3xl">🍓</span>
               </div>
               
               <h2 className="text-2xl font-black text-white tracking-tight mb-3">
@@ -2743,7 +2742,7 @@ export default function HomePage() {
               </p>
               
               <p className="text-slate-300 text-sm leading-relaxed mb-8 max-w-sm">
-                Describe what you want to achieve. AIRA segments your customers, writes the messages, picks the right channel for each person, and shows you live delivery results.
+                Type a campaign goal in plain English. AIRA picks the right customers, writes the messages, routes them through the best channel, and shows you live delivery results.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -2755,7 +2754,7 @@ export default function HomePage() {
                   }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white transition-all duration-200 shadow-lg shadow-purple-900/30 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  Yes, Start Guided Tour
+                  Take the Guided Tour
                 </button>
                 <button
                   onClick={() => {
@@ -2764,7 +2763,7 @@ export default function HomePage() {
                   }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200 transition-all hover:bg-slate-900/60"
                 >
-                  No thanks, I'll write mine
+                  Skip — I'll type my own goal
                 </button>
               </div>
             </div>

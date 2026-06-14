@@ -1844,18 +1844,18 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {userName ? (
+              {userName.trim().length > 1 ? (
                 <>
                   <span className="text-sm text-text-secondary flex items-center gap-1.5 font-mono">
                     <Users size={12} className="inline text-slate-400" />
-                    <span>{userName}</span>
+                    <span>{userName.trim()}</span>
                   </span>
                   <button
                     onClick={() => setIsEditingName(true)}
-                    className="text-[10px] text-slate-500 hover:text-purple-400 transition-colors"
+                    className="text-[10px] text-slate-500 hover:text-purple-400 transition-colors font-mono"
                     title="Edit name"
                   >
-                    ✎
+                    edit
                   </button>
                 </>
               ) : (

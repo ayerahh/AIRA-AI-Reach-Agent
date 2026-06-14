@@ -544,6 +544,8 @@ export default function HomePage() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const activeRunIdRef = useRef(0);
+  // ANTIGRAVITY REF FIX:
+  const reviewSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("aira_user_name");
@@ -1002,6 +1004,26 @@ export default function HomePage() {
     localStorage.setItem("aira_has_seen_welcome", "true");
     setShowWelcomeModal(false);
   }, []);
+
+  // ============================================================================
+  // ANTIGRAVITY VIEWPORT CONTROLLER (POST-LAYOUT SHIFT STABLE)
+  // ============================================================================
+  useEffect(() => {
+    if (phase === "review") {
+      // 350ms delay accommodates both your new upper search bar placement 
+      // and the CSS expand animations before running position calculations
+      const handleVisualScrollHandoff = setTimeout(() => {
+        if (reviewSectionRef.current) {
+          reviewSectionRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
+      }, 350);
+
+      return () => clearTimeout(handleVisualScrollHandoff);
+    }
+  }, [phase]);
 
   // ─── Derived values ──────────────────────────────────────────────────────
 
@@ -1677,7 +1699,7 @@ export default function HomePage() {
         {(isReview || isLaunching || isResults) && campaign && (
           <>
             {/* ── Suggested Audience ─────────────────────────────────────── */}
-            <section className="mb-6 animate-slide-up">
+            <section ref={reviewSectionRef} className="mb-6 animate-slide-up scroll-mt-12">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-lg bg-accent/20 flex items-center justify-center">
                   <Users size={13} className="text-accent-bright" />

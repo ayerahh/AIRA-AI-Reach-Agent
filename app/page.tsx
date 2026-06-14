@@ -2749,6 +2749,7 @@ export default function HomePage() {
               <button
                   type="button"
                   onClick={() => {
+                    localStorage.setItem("aira_has_seen_welcome", "true");
                     setShowWelcomeModal(false);
                     setGuidedDemo(true);
                   }}
@@ -2758,8 +2759,8 @@ export default function HomePage() {
                 </button>
                 <button
                   onClick={() => {
+                    localStorage.setItem("aira_has_seen_welcome", "true");
                     setShowWelcomeModal(false);
-                    localStorage.setItem('aira_demo_seen', 'true');
                   }}
                   className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200 transition-all hover:bg-slate-900/60"
                 >

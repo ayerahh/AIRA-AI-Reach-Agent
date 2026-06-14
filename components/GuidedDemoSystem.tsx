@@ -1,63 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Play, Check } from 'lucide-react';
 
-// Steps customized specifically for AIRA features
-const GUIDED_TOUR_STEPS = [
-  {
-    id: 'welcome',
-    title: '🎉 Welcome to AIRA',
-    description: 'Let us show you how AIRA turns natural-language marketing goals into audience segments, channel strategies, and live telemetry log streams. This tour takes 2 minutes.',
-    target: null,
-    position: 'center',
-    highlightPadding: 0
-  },
-  {
-    id: 'platform-takeover',
-    title: '🚀 AI-Native Landing Takeover',
-    description: 'AIRA acts as an autonomous reach agent, designed to map business objectives directly onto complex marketing campaigns.',
-    target: '[data-tour="platform-takeover"]',
-    position: 'bottom',
-    highlightPadding: 8
-  },
-  {
-    id: 'goal-input',
-    title: '📝 Campaign Goal Input',
-    description: 'Describe your campaign target in plain English or select one of the suggested goals. Press Ctrl+Enter to dispatch the AI agent.',
-    target: '[data-tour="goal-input"]',
-    position: 'top',
-    highlightPadding: 16
-  },
-  {
-    id: 'pipeline-diagram',
-    title: '🛰️ Live Pipeline Simulation',
-    description: 'Visualize how the routing engine analyzes customer variables, calculates transaction records, and determines delivery channels in real time.',
-    target: '[data-tour="pipeline-diagram"]',
-    position: 'top',
-    highlightPadding: 12
-  },
-  {
-    id: 'observability-stack',
-    title: '📊 Telemetry & Snapshots',
-    description: 'Monitor database transactions, observe API request response latencies, and restore past campaign states to review logs.',
-    target: '[data-tour="observability-stack"]',
-    position: 'top',
-    highlightPadding: 12
-  },
-  {
-    id: 'showcase-sections',
-    title: '🏆 Accomplishments & Roadmap',
-    description: 'Check out the underlying architecture achievements, known limitations, and future development milestones for the AIRA agent.',
-    target: '[data-tour="showcase-sections"]',
-    position: 'top',
-    highlightPadding: 12
-  },
-  {
-    id: 'final-cta',
-    title: '✨ Start Orchestrating!',
-    description: 'You are now ready to pilot the system. Enter your custom campaign goal or pick a template above to generate audience metrics and telemetry callbacks!',
-    target: null,
-    position: 'center',
-    highlightPadding: 0
-  }
+interface TourStep {
+  id: string;
+  title: string;
+  description: string;
+  target: string | null;
+  position: 'center' | 'top' | 'bottom' | 'left' | 'right';
+  highlightPadding: number;
+}
+
+const GUIDED_TOUR_STEPS: TourStep[] = [
+  { id: 'welcome', title: 'Welcome to AIRA', description: 'Let us show you how AIRA turns natural-language marketing goals into audience segments, channel strategies, and live telemetry log streams.', target: null, position: 'center', highlightPadding: 0 },
+  { id: 'platform-takeover', title: 'AI-Native Landing Takeover', description: 'AIRA acts as an autonomous reach agent, designed to map business objectives directly onto complex marketing campaigns.', target: '[data-tour="platform-takeover"]', position: 'bottom', highlightPadding: 8 },
+  { id: 'onboarding-portal', title: 'Data Ingestion Portal', description: 'Generate a realistic brand dataset in one click, or paste your own raw customer JSON directly. AIRA ingests both instantly and seeds the live CRM store.', target: '[data-tour="onboarding-portal"]', position: 'top', highlightPadding: 12 },
+  { id: 'customer-spotlight', title: 'Top Customer Spotlight', description: 'Once data is loaded, AIRA surfaces your highest-value customers ranked by a dynamic weighted RFM score — combining lifetime spend, order frequency, and recency signals.', target: '[data-tour="customer-spotlight"]', position: 'top', highlightPadding: 12 },
+  { id: 'pipeline-diagram', title: 'Segment Routing Pipeline', description: 'A live contextual routing diagram that reacts to your campaign goal — showing user node, behavior timeline, AIRA decision core, and gateway relay statuses in real time.', target: '[data-tour="pipeline-diagram"]', position: 'top', highlightPadding: 12 },
+  { id: 'goal-input', title: 'Campaign Goal Input', description: 'Type any marketing objective in plain English. AIRA parses intent, builds an audience segment with RFM filters, drafts 3 channel-specific message variants, and picks the best channel — all in one shot.', target: '[data-tour="goal-input"]', position: 'top', highlightPadding: 16 },
+  { id: 'control-toolbar', title: 'Right-Rail Control Center', description: 'Toggle light/dark theme, open the Build War Logs sidebar to see every bug and battle from the 72-hour build, or launch the Engine Console to inspect live campaign snapshots.', target: '[data-tour="control-toolbar"]', position: 'top', highlightPadding: 12 },
+  { id: 'observability-stack', title: 'Observability & Snapshot Engine', description: 'The Engine Console stores every launched campaign as a time-travel snapshot. Restore any past campaign to replay its audience, variants, and analytics — built for post-campaign auditing.', target: '[data-tour="observability-stack"]', position: 'top', highlightPadding: 12 },
+  { id: 'showcase-sections', title: 'Achievements & Roadmap', description: 'Review platform milestones, honest known limitations, and the AI feature roadmap — what was shipped in 72 hours vs what comes next.', target: '[data-tour="showcase-sections"]', position: 'top', highlightPadding: 12 },
+  { id: 'final-cta', title: 'Start Orchestrating!', description: 'You are ready. Enter a custom campaign goal or pick a template — AIRA will segment, message, and dispatch in seconds.', target: null, position: 'center', highlightPadding: 0 }
 ];
 
 interface HighlightPosition {
@@ -306,7 +269,7 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
           onClick={() => setIsActive(true)}
           className="fixed bottom-6 right-6 z-50 px-4 py-2.5 bg-gradient-to-r from-[#ef4444] to-[#ec4899] text-white rounded-full font-bold text-xs hover:shadow-lg hover:shadow-pink-500/50 transition-all hover:scale-105 flex items-center gap-2 uppercase tracking-wider border border-white/10"
         >
-          <span>🎯</span> Start Tour
+          <Play size={12} fill="currentColor" /> Start Tour
         </button>
       )}
 
@@ -403,9 +366,9 @@ export const GuidedDemoSystem: React.FC<GuidedDemoSystemProps> = ({
                 ) : (
                   <button
                     onClick={handleCompleteTour}
-                    className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white transition-all font-bold hover:brightness-115"
+                    className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white transition-all font-bold hover:brightness-115 flex items-center justify-center gap-1.5"
                   >
-                    🚀 End Tour
+                    <Check size={14} className="stroke-[3]" /> End Tour
                   </button>
                 )}
               </div>

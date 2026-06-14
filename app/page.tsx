@@ -1012,10 +1012,6 @@ export default function HomePage() {
           const data = await response.json();
           if (response.ok && data.success) {
             setImportResult(data);
-            setToast({
-              type: "success",
-              message: `Auto-seeded dataset for Guided Tour: ${data.customersAdded} customers ingested.`
-            });
           }
         } catch (err) {
           console.error("Failed to auto-seed demo data for guided tour:", err);

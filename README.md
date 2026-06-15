@@ -1,96 +1,115 @@
 # AIRA — AI Reach Agent
 
-> AI-native mini CRM built for the **Xeno Engineering Take-Home Assignment**.
-> Turn a plain-English campaign goal into a targeted, launched, and measured campaign in under 30 seconds.
+> One prompt. Full campaign. Built for the Xeno Engineering Internship 2026.
+
+Type a plain-English goal. AIRA parses it, segments your customers, generates three message variants with Llama 3.3, recommends a channel, launches, and shows you live delivery analytics — all in under 30 seconds.
+
+**Live demo:** [aira-ecru.vercel.app](https://aira-ecru.vercel.app)
+
+---
+
+## What It Does
+
+- **Natural language campaign goals** — no dropdowns, no SQL, no filters. Just describe what you want.
+- **RFM segmentation** — regex-based NLP parser extracts intent, inactive days, and tier keywords from your goal and builds a precise customer filter in under a millisecond.
+- **Groq + Llama 3.3 70B** — live AI inference for agent reasoning, three message variants per campaign, and per-customer witty observations on import.
+- **Three-layer name sanitizer** — model prompt rule + source data removal + output regex, so `{{first_name}}` is never replaced with a real customer name.
+- **Async delivery simulation** — separate channel service fires webhook callbacks per customer (sent → delivered → opened → clicked) with realistic delays and a 5% failure rate.
+- **Live analytics polling** — frontend polls `/api/campaigns/[id]` every 2.5 seconds. Analytics recompute from scratch on every callback, never from a stale counter.
+- **Campaign history drawer** — every campaign this session, always visible, never buried.
+- **Quick Start datasets** — three pre-built fictional brands (Code & Chai Collective, pet brand, gym brand) with realistic personas, spending patterns, and preferred channels.
+- **Guided tour** — spotlight-based walkthrough for first-time users.
+- **Build War Logs** — 35 real bugs documented in the sidebar.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Browser (Next.js App Router)              │
-│                                                                   │
-│   ┌───────────────────────────────────────────────────────────┐  │
-│   │                    app/page.tsx (Client)                   │  │
-│   │                                                            │  │
-│   │  [1] Goal Input → "Re-engage lapsed customers…"           │  │
-│   │         │                                                  │  │
-│   │  [2] Agent Thinking Panel (animated step-by-step UI)      │  │
-│   │         │                                                  │  │
-│   │  [3] Review: Audience + Message Variants + Channel        │  │
-│   │         │                                                  │  │
-│   │  [4] Approve → Launch → Analytics Results                 │  │
-│   └───────────────────┬───────────────────────────────────────┘  │
-└───────────────────────┼─────────────────────────────────────────┘
-                        │  HTTP (fetch)
-          ┌─────────────▼──────────────┐
-          │     Next.js Route Handlers  │
-          │                            │
-          │  POST /api/agent/run       │  ← Batch 2
-          │  POST /api/campaigns/launch│  ← Batch 2
-          │  GET  /api/campaigns       │  ← Batch 2
-          │  GET  /api/customers       │  ← Batch 2
-          └──────┬──────────┬──────────┘
-                 │          │
-   ┌─────────────▼───┐  ┌───▼──────────────────────┐
-   │   Agent Service  │  │   Channel Service         │
-   │  lib/agent.ts    │  │   lib/channel-service.ts  │
-   │                  │  │                           │
-   │ • Parse goal     │  │ • Route by channel        │
-   │ • Score segments │  │ • Simulate delivery       │
-   │ • Draft messages │  │ • Return comm records     │
-   │ • Pick channel   │  └───────────┬───────────────┘
-   └──────┬───────────┘              │
-          │                          │
-   ┌──────▼──────────────────────────▼──────────────┐
-   │                  lib/store.ts                   │
-   │           (In-Memory Singleton Store)            │
-   │                                                  │
-   │   customers[]   orders[]   campaigns[]           │
-   │   communications[]                               │
-   └──────────────────────────────────────────────────┘
-          │
-   ┌──────▼──────────────┐
-   │    lib/seed.ts       │
-   │  25 customers        │
-   │  ~100 orders         │
-   │  (Velour brand data) │
-   └──────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              Browser — React / Next.js               │
+│                                                      │
+│  AppPhase FSM · Live Poll (2.5s) · History Drawer   │
+│  Variant Cards · Guided Tour · Campaign Goal Input   │
+└──────────────────────┬──────────────────────────────┘
+                       │ HTTP
+┌──────────────────────▼──────────────────────────────┐
+│           Next.js API Routes (app/api/)              │
+│                                                      │
+│  POST /api/run              ← goal → full campaign   │
+│  POST /api/campaigns/[id]/approve ← launch campaign  │
+│  GET  /api/campaigns/[id]   ← live analytics poll    │
+│  POST /api/receipts         ← webhook receiver       │
+│  POST /api/import           ← seed / paste customers │
+└────────┬──────────────────────────┬─────────────────┘
+         │                          │
+┌────────▼────────┐      ┌──────────▼──────────────────┐
+│  lib/agent.ts   │      │     lib/store.ts             │
+│                 │      │  globalThis.__aira_store__   │
+│  NLP parser     │      │                              │
+│  Segment builder│      │  customers[]                 │
+│  Groq caller    │      │  orders[]                    │
+│  Name sanitizer │      │  campaigns[]                 │
+│  Fallback logic │      │  communications[]            │
+└────────┬────────┘      └──────────────────────────────┘
+         │
+┌────────▼────────────────────────────────────────────┐
+│                    Groq API                          │
+│              Llama 3.3 · 70B Versatile               │
+│                                                      │
+│  Agent reasoning · Message variants · Observations   │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│           channel-service/  (separate process)       │
+│                   Express · Port 3001                │
+│                                                      │
+│  POST /send                                          │
+│  ├── Acknowledge instantly  { success: true }        │
+│  ├── Simulate per-customer delay (1–5s)              │
+│  ├── Cascade: delivered → opened (60%) → clicked (40%)│
+│  └── Fire POST /api/receipts per customer            │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Core Flow (5 Steps)
+## Campaign Flow
 
 ```
-Goal Input
-    │
-    ▼
-POST /api/agent/run
-    │
-    ├── Parse goal (fake LLM → real LLM swap point)
-    ├── Analyse customers in store
-    ├── Build AudienceSegment (RFM + tag filters)
-    ├── Draft 3 MessageVariants
-    ├── Select optimal CampaignChannel
-    └── Return Campaign { status: "pending_approval" }
-    │
-    ▼
-UI Review (Audience / Variants / Channel)
-    │
-    ▼
-POST /api/campaigns/launch
-    │
-    ├── Update campaign status → "launching"
-    ├── Call Channel Service per customer
-    │       └── Simulate: queued → sent → delivered → opened/clicked
-    ├── Create Communication records in store
-    ├── Compute CampaignAnalytics
-    └── Return { campaign, analytics }
-    │
-    ▼
-Analytics Results Panel
+User types goal
+      │
+      ▼
+POST /api/run
+      │
+      ├── parseGoal()        — extract intent, days, tier keywords via regex
+      ├── buildSegmentConfig() — build customer filter predicate from goal
+      ├── customers.filter()  — run predicate against full store
+      ├── callGroqLLM()      — generate 3 message variants
+      ├── sanitizeVariants() — strip any real names the model injected
+      └── return Campaign { status: "pending_approval" }
+      │
+      ▼
+User reviews audience + variants + channel recommendation
+      │
+      ▼
+POST /api/campaigns/[id]/approve
+      │
+      ├── POST channel-service/send  — dispatch full customer list
+      │         └── returns { success: true } immediately
+      │
+      ▼
+channel-service fires async callbacks → POST /api/receipts
+      │
+      ├── updateCommunicationStatus()
+      ├── recount all comms from scratch (not increment)
+      └── updateCampaign() with fresh analytics
+      │
+      ▼
+Frontend polls GET /api/campaigns/[id] every 2.5s
+      │
+      ▼
+Live analytics panel updates
 ```
 
 ---
@@ -100,85 +119,110 @@ Analytics Results Panel
 ```
 aira/
 ├── app/
-│   ├── layout.tsx              # Root layout + fonts
-│   ├── globals.css             # Tailwind + custom animations
-│   ├── page.tsx                # Main page (Goal → Agent → Launch → Analytics)
+│   ├── page.tsx                      # Main app — FSM, polling, all UI
+│   ├── layout.tsx
+│   ├── globals.css
 │   └── api/
-│       ├── agent/
-│       │   └── run/route.ts    # POST: run agent reasoning
+│       ├── run/route.ts              # POST — agent reasoning + Groq
 │       ├── campaigns/
-│       │   ├── route.ts        # GET: list campaigns
-│       │   └── launch/route.ts # POST: launch + channel dispatch
-│       └── customers/
-│           └── route.ts        # GET: customer list (debug/future)
+│       │   ├── route.ts              # GET — list all campaigns
+│       │   └── [id]/
+│       │       ├── route.ts          # GET — live analytics poll
+│       │       └── approve/route.ts  # POST — launch + dispatch
+│       ├── receipts/route.ts         # POST — webhook receiver
+│       └── import/route.ts           # POST — seed / paste import
 │
 ├── lib/
-│   ├── types.ts                # All TypeScript domain types
-│   ├── seed.ts                 # 25 customers + 100 orders
-│   ├── store.ts                # In-memory singleton store
-│   ├── agent.ts                # Agent reasoning engine (fake → LLM)
-│   ├── channel-service.ts      # Channel dispatch simulation
-│   ├── analytics.ts            # Analytics computation
-│   └── utils.ts                # cn(), formatINR(), makeId(), etc.
+│   ├── agent.ts                      # NLP parser, segment builder, Groq caller, sanitizer
+│   ├── store.ts                      # globalThis singleton — 4 arrays
+│   ├── types.ts                      # All TypeScript domain types
+│   ├── seed.ts                       # Default seed data
+│   ├── demoDatasets.ts               # 3 pre-built brand datasets
+│   ├── campaign-suggestions.ts       # Example goal chips
+│   └── utils.ts                      # cn(), formatINR(), formatPct()
 │
-├── package.json
-├── tailwind.config.ts
-├── tsconfig.json
-└── README.md
+├── components/
+│   ├── BusinessOnboardingPortal.tsx  # Import UI — paste, generate, quick start
+│   ├── TopCustomerSpotlight.tsx      # Top customer card + next button
+│   ├── GuidedDemoSystem.tsx          # Spotlight tour
+│   ├── CallbackTerminal.tsx          # Live delivery event log
+│   ├── TelemetryDashboard.tsx        # Analytics panel
+│   ├── DevWarLogs.tsx                # Build war logs sidebar
+│   └── AiraShowcaseSections.tsx      # About, roadmap, limitations, footer
+│
+├── channel-service/
+│   ├── index.js                      # Express server — async delivery simulation
+│   └── package.json
+│
+└── public/
+    └── architecture.svg              # Architecture diagram
 ```
 
 ---
 
-## Swapping Fake AI → Real LLM
+## Key Engineering Decisions
 
-`lib/agent.ts` exports a single async function `runAgent(goalText, customers, orders)`.
-To plug in a real LLM:
-
-```typescript
-// Current (fake):
-const reasoning = buildFakeReasoning(goalText, segment);
-
-// Replace with:
-const reasoning = await callClaudeAPI(goalText, customerSummary);
-// or
-const reasoning = await callOpenAI(goalText, customerSummary);
-```
-
-The function signature and return type stay identical — the rest of the app is unaffected.
+| Decision | What | Why |
+|----------|------|-----|
+| **Separate channel service** | Express server on port 3001 | Mirrors real gateway pattern — Twilio, WhatsApp API acknowledge first, deliver async |
+| **In-memory store** | `globalThis.__aira_store__` singleton | Zero setup, ships fast. Swap to Postgres is one file change |
+| **Full recount on every callback** | `allComms.filter()` not `counter++` | Out-of-order callbacks self-correct. Stale counters don't |
+| **Regex NLP parser** | `parseGoal()` before Groq | Intent extraction in <1ms, no LLM cost, deterministic |
+| **Three-layer name sanitizer** | Prompt rule + context removal + regex | Belt and suspenders — model still injects names sometimes |
+| **Groq + Llama 3.3 70B** | Free tier, 14k req/day | Fast, free, genuinely capable. Fallback deterministic logic if rate-limited |
+| **2.5s polling** | `setInterval` on `/api/campaigns/[id]` | Simpler than SSE for demo scope, visible enough for live feel |
+| **No auth** | None | Judges need immediate access. Explicit tradeoff, not an oversight |
 
 ---
 
 ## Running Locally
 
+**CRM (main app):**
 ```bash
 npm install
 npm run dev
 # → http://localhost:3000
 ```
 
+**Channel service (separate terminal):**
+```bash
+cd channel-service
+npm install
+node index.js
+# → http://localhost:3001
+```
+
+**Environment variables:**
+```
+GROQ_API_KEY=your_key_here
+CHANNEL_SERVICE_URL=http://localhost:3001
+```
+
+Get a free Groq key at [console.groq.com](https://console.groq.com). The app falls back to deterministic reasoning if no key is provided — all features still work.
+
 ---
 
 ## Tech Stack
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Framework | Next.js 15 (App Router) | File-based routing, server actions, edge-ready |
-| Language | TypeScript | End-to-end type safety |
-| Styling | Tailwind CSS | Utility-first, demo-speed |
-| Icons | lucide-react | Consistent, tree-shakeable |
-| Dates | date-fns | Lightweight date manipulation |
-| State | React useState + server route handlers | No Redux overhead for demo scope |
-| Storage | In-memory (Node.js module singleton) | Zero setup, swap-ready for Supabase/Prisma |
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| AI | Groq API — Llama 3.3 70B Versatile |
+| Styling | Tailwind CSS |
+| Icons | lucide-react |
+| Channel service | Express.js |
+| Storage | In-memory singleton |
+| Deployment | Vercel |
 
 ---
 
-## Design Decisions
+## Links
 
-- **Route handlers over Server Actions** — consistent pattern, easier to test with `curl`, clear separation of concerns.
-- **Channel Service as a separate `lib/` module** — simulates microservice boundary. In production this would be a separate service called over HTTP.
-- **Fake reasoning first** — `lib/agent.ts` uses deterministic logic so the demo never fails. The LLM integration point is a single function call.
-- **In-memory store** — `lib/store.ts` is a Node.js singleton that survives hot-reload in dev. Swapping to a DB is a one-file change.
+- **Frontend:** [aira-ecru.vercel.app](https://aira-ecru.vercel.app)
+- **Backend (channel service):** [github.com/ayerahh/AIRA-AI-Reach-Agent/tree/main/channel-service](https://github.com/ayerahh/AIRA-AI-Reach-Agent/tree/main/channel-service)
+- **Architecture diagram:** [aira-ecru.vercel.app/architecture.svg](https://aira-ecru.vercel.app/architecture.svg)
 
 ---
 
-*Built for Xeno · 2.5-day sprint · AIRA v0.1*
+*Built by Aira K. Salish · SRMIST · Xeno Engineering Internship 2026 · 72 hours*

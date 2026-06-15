@@ -1,0 +1,144 @@
+<svg viewBox="0 0 820 520" xmlns="http://www.w3.org/2000/svg" role="img" font-family="'Inter', 'SF Pro Display', system-ui, sans-serif" style="background:#0f0f0f">
+  <title>AIRA Technical Architecture</title>
+  <desc>End-to-end architecture showing browser, Next.js app, in-memory store, Groq AI, and channel service with callback loop</desc>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#22c55e"/>
+    </marker>
+    <marker id="arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="520" fill="#0f0f0f" rx="12"/>
+
+  <!-- Title -->
+  <text x="410" y="36" text-anchor="middle" font-size="14" font-weight="600" fill="#f5f5f5" letter-spacing="0.5">AIRA — Technical Architecture</text>
+
+  <!-- Layer labels -->
+  <text x="28" y="86" font-size="9" font-weight="600" fill="#666" letter-spacing="1.2">CLIENT</text>
+  <text x="28" y="206" font-size="9" font-weight="600" fill="#666" letter-spacing="1.2">NEXT.JS SERVER</text>
+  <text x="28" y="366" font-size="9" font-weight="600" fill="#666" letter-spacing="1.2">EXTERNAL</text>
+
+  <!-- Layer dividers -->
+  <line x1="18" y1="96" x2="800" y2="96" stroke="#222" stroke-width="1"/>
+  <line x1="18" y1="216" x2="800" y2="216" stroke="#222" stroke-width="1"/>
+  <line x1="18" y1="376" x2="800" y2="376" stroke="#222" stroke-width="1"/>
+
+  <!-- CLIENT LAYER -->
+  <rect x="60" y="106" width="680" height="96" rx="8" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="400" y="124" text-anchor="middle" font-size="9" fill="#6366f1" letter-spacing="0.8">React (Next.js App Router · page.tsx)</text>
+
+  <rect x="80" y="132" width="130" height="54" rx="6" fill="#1e1b4b"/>
+  <text x="145" y="151" text-anchor="middle" font-size="10" font-weight="600" fill="#a5b4fc">AppPhase FSM</text>
+  <text x="145" y="166" text-anchor="middle" font-size="8.5" fill="#818cf8">idle → thinking</text>
+  <text x="145" y="178" text-anchor="middle" font-size="8.5" fill="#818cf8">→ review → live</text>
+
+  <rect x="230" y="132" width="120" height="54" rx="6" fill="#1e1b4b"/>
+  <text x="290" y="151" text-anchor="middle" font-size="10" font-weight="600" fill="#a5b4fc">Live Polling</text>
+  <text x="290" y="166" text-anchor="middle" font-size="8.5" fill="#818cf8">GET /api/campaigns</text>
+  <text x="290" y="178" text-anchor="middle" font-size="8.5" fill="#818cf8">/[id] · every 2.5s</text>
+
+  <rect x="370" y="132" width="120" height="54" rx="6" fill="#1e1b4b"/>
+  <text x="430" y="151" text-anchor="middle" font-size="10" font-weight="600" fill="#a5b4fc">History Drawer</text>
+  <text x="430" y="166" text-anchor="middle" font-size="8.5" fill="#818cf8">past campaigns</text>
+  <text x="430" y="178" text-anchor="middle" font-size="8.5" fill="#818cf8">+ analytics</text>
+
+  <rect x="510" y="132" width="120" height="54" rx="6" fill="#1e1b4b"/>
+  <text x="570" y="151" text-anchor="middle" font-size="10" font-weight="600" fill="#a5b4fc">Variant Cards</text>
+  <text x="570" y="166" text-anchor="middle" font-size="8.5" fill="#818cf8">3 AI-drafted</text>
+  <text x="570" y="178" text-anchor="middle" font-size="8.5" fill="#818cf8">message variants</text>
+
+  <!-- SERVER LAYER -->
+  <rect x="60" y="228" width="150" height="120" rx="8" fill="#14532d"/>
+  <text x="135" y="248" text-anchor="middle" font-size="10" font-weight="600" fill="#86efac">AI Agent</text>
+  <text x="135" y="262" text-anchor="middle" font-size="8.5" fill="#4ade80">lib/agent.ts</text>
+  <line x1="75" y1="272" x2="195" y2="272" stroke="#166534" stroke-width="1"/>
+  <text x="135" y="287" text-anchor="middle" font-size="8" fill="#86efac">RFM segmentation</text>
+  <text x="135" y="300" text-anchor="middle" font-size="8" fill="#86efac">audience sizing</text>
+  <text x="135" y="313" text-anchor="middle" font-size="8" fill="#86efac">variant generation</text>
+  <text x="135" y="326" text-anchor="middle" font-size="8" fill="#86efac">name sanitizer</text>
+  <text x="135" y="339" text-anchor="middle" font-size="8" fill="#86efac">dynamic suggestions</text>
+
+  <rect x="240" y="228" width="200" height="120" rx="8" fill="#1c1917"/>
+  <text x="340" y="248" text-anchor="middle" font-size="10" font-weight="600" fill="#d6d3d1">API Routes</text>
+  <text x="340" y="262" text-anchor="middle" font-size="8" fill="#a8a29e">app/api/</text>
+  <line x1="255" y1="270" x2="425" y2="270" stroke="#292524" stroke-width="1"/>
+  <text x="340" y="285" text-anchor="middle" font-size="8" fill="#d6d3d1">POST /api/run</text>
+  <text x="340" y="298" text-anchor="middle" font-size="8" fill="#d6d3d1">POST /api/campaigns/[id]/approve</text>
+  <text x="340" y="311" text-anchor="middle" font-size="8" fill="#d6d3d1">GET  /api/campaigns/[id]</text>
+  <text x="340" y="324" text-anchor="middle" font-size="8" fill="#d6d3d1">POST /api/receipts</text>
+  <text x="340" y="337" text-anchor="middle" font-size="8" fill="#d6d3d1">POST /api/import</text>
+
+  <rect x="460" y="228" width="140" height="120" rx="8" fill="#1c1917"/>
+  <text x="530" y="248" text-anchor="middle" font-size="10" font-weight="600" fill="#d6d3d1">In-Memory Store</text>
+  <text x="530" y="262" text-anchor="middle" font-size="8" fill="#a8a29e">lib/store.ts · globalThis</text>
+  <line x1="475" y1="270" x2="585" y2="270" stroke="#292524" stroke-width="1"/>
+  <text x="530" y="285" text-anchor="middle" font-size="8" fill="#d6d3d1">customers[ ]</text>
+  <text x="530" y="298" text-anchor="middle" font-size="8" fill="#d6d3d1">orders[ ]</text>
+  <text x="530" y="311" text-anchor="middle" font-size="8" fill="#d6d3d1">campaigns[ ]</text>
+  <text x="530" y="324" text-anchor="middle" font-size="8" fill="#d6d3d1">communications[ ]</text>
+
+  <!-- EXTERNAL LAYER -->
+  <rect x="60" y="390" width="150" height="100" rx="8" fill="#0c0a09"/>
+  <rect x="60" y="390" width="150" height="100" rx="8" fill="none" stroke="#f97316" stroke-width="1.5"/>
+  <text x="135" y="414" text-anchor="middle" font-size="10" font-weight="600" fill="#fb923c">Groq API</text>
+  <text x="135" y="429" text-anchor="middle" font-size="8.5" fill="#fdba74">Llama 3.3 · 70B</text>
+  <line x1="75" y1="437" x2="195" y2="437" stroke="#431407" stroke-width="1"/>
+  <text x="135" y="451" text-anchor="middle" font-size="8" fill="#fb923c">agent reasoning</text>
+  <text x="135" y="464" text-anchor="middle" font-size="8" fill="#fb923c">3 message variants</text>
+  <text x="135" y="477" text-anchor="middle" font-size="8" fill="#fb923c">witty observations</text>
+
+  <rect x="520" y="390" width="250" height="100" rx="8" fill="#0c0a09"/>
+  <rect x="520" y="390" width="250" height="100" rx="8" fill="none" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="645" y="414" text-anchor="middle" font-size="10" font-weight="600" fill="#4ade80">Channel Service</text>
+  <text x="645" y="429" text-anchor="middle" font-size="8.5" fill="#86efac">aira-channel-service · separate process</text>
+  <line x1="535" y1="437" x2="755" y2="437" stroke="#14532d" stroke-width="1"/>
+  <text x="645" y="451" text-anchor="middle" font-size="8" fill="#4ade80">POST /dispatch  →  simulate delivery</text>
+  <text x="645" y="464" text-anchor="middle" font-size="8" fill="#4ade80">exponential backoff: 1s·5s·30s·5m·1h</text>
+  <text x="645" y="477" text-anchor="middle" font-size="8" fill="#4ade80">callbacks: POST /api/receipts</text>
+
+  <!-- Arrows -->
+  <line x1="145" y1="186" x2="145" y2="228" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="120" y="212" font-size="7.5" fill="#818cf8">POST /api/run</text>
+
+  <line x1="135" y1="348" x2="135" y2="390" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+  <text x="138" y="374" font-size="7.5" fill="#fb923c">Groq call</text>
+
+  <line x1="210" y1="270" x2="460" y2="275" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="320" y="265" text-anchor="middle" font-size="7.5" fill="#888">read/write</text>
+
+  <line x1="440" y1="290" x2="460" y2="290" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <line x1="290" y1="186" x2="340" y2="228" stroke="#6366f1" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arrow-blue)"/>
+
+  <line x1="440" y1="340" x2="520" y2="430" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="470" y="400" font-size="7.5" fill="#4ade80">dispatch</text>
+
+  <line x1="645" y1="390" x2="645" y2="348" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#arrow-green)"/>
+  <text x="650" y="374" font-size="7.5" fill="#4ade80">callbacks</text>
+
+  <line x1="620" y1="348" x2="575" y2="348" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <rect x="620" y="106" width="162" height="96" rx="6" fill="#111" stroke="#222" stroke-width="1"/>
+  <text x="701" y="122" text-anchor="middle" font-size="8.5" font-weight="600" fill="#aaa">Legend</text>
+  <line x1="634" y1="134" x2="654" y2="134" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="660" y="137" font-size="7.5" fill="#818cf8">client → server request</text>
+  <line x1="634" y1="148" x2="654" y2="148" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="660" y="151" font-size="7.5" fill="#4ade80">dispatch / callback</text>
+  <line x1="634" y1="162" x2="654" y2="162" stroke="#f97316" stroke-width="1.5"/>
+  <text x="660" y="165" font-size="7.5" fill="#fb923c">Groq AI call</text>
+  <line x1="634" y1="176" x2="654" y2="176" stroke="#666" stroke-width="1"/>
+  <text x="660" y="179" font-size="7.5" fill="#888">store read/write</text>
+  <line x1="634" y1="190" x2="654" y2="190" stroke="#6366f1" stroke-width="1" stroke-dasharray="3 2"/>
+  <text x="660" y="193" font-size="7.5" fill="#818cf8">live poll (2.5s)</text>
+</svg>

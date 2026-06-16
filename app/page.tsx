@@ -277,13 +277,18 @@ function VariantCard({
   variant,
   isChosen,
   onSelect,
+  previewName,
 }: {
   variant: MessageVariant;
   isChosen: boolean;
   onSelect: () => void;
+  previewName?: string;
 }) {
   const ChannelIcon = CHANNEL_ICONS[variant.channel];
   const tone = TONE_CONFIG[variant.tone] ?? TONE_CONFIG.informational;
+  const firstName = previewName?.trim().split(/\s+/)[0] || "{{first_name}}";
+  const previewSubject = variant.subject?.replace(/\{\{first_name\}\}/g, firstName);
+  const previewBody = variant.body.replace(/\{\{first_name\}\}/g, firstName);
 
   return (
     <button
@@ -335,13 +340,13 @@ function VariantCard({
         {variant.subject && (
           <div className={cn("text-[11px] font-mono px-3 py-2 rounded-lg mb-3 border flex gap-1.5 items-start", tone.bg, tone.border)}>
             <span className="text-slate-500 flex-shrink-0 mt-px">Subject:</span>
-            <span className={cn("font-semibold leading-snug", tone.color)}>{variant.subject}</span>
+            <span className={cn("font-semibold leading-snug", tone.color)}>{previewSubject}</span>
           </div>
         )}
 
         {/* Body preview */}
         <p className="text-xs text-slate-300 leading-relaxed line-clamp-4 font-sans">
-          {variant.body}
+          {previewBody}
         </p>
 
         {/* Footer */}
@@ -2318,6 +2323,7 @@ export default function HomePage() {
                       (selectedVariantId ?? campaign.chosenVariantId)
                     }
                     onSelect={() => setSelectedVariantId(variant.id)}
+                    previewName={selectedSpotlightCustomer?.name}
                   />
                 ))}
               </div>

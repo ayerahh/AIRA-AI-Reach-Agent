@@ -23,6 +23,15 @@ interface ReceiptPayload {
  */
 export async function POST(req: Request) {
   try {
+    // Verify webhook secret if configured — prevents fake receipt injection
+    const secret = process.env.WEBHOOK_SECRET;
+    if (secret) {
+      const incoming = req.headers.get("x-webhook-secret");
+      if (incoming !== secret) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     const body = (await req.json()) as ReceiptPayload;
     const { commId, campaignId, status, timestamp, failureReason } = body;
 
@@ -33,6 +42,16 @@ export async function POST(req: Request) {
     const comm = getCommunicationById(commId);
     if (!comm) {
       return NextResponse.json({ error: "Communication not found" }, { status: 404 });
+    }
+
+    // Idempotency guard — don't downgrade a terminal status (clicked > opened > delivered)
+    const statusRank: Record<string, number> = {
+      queued: 0, sent: 1, delivered: 2, opened: 3, clicked: 4, failed: -1,
+    };
+    const currentRank = statusRank[comm.status] ?? 0;
+    const incomingRank = statusRank[status] ?? 0;
+    if (incomingRank <= currentRank && comm.status !== "failed") {
+      return NextResponse.json({ ok: true, skipped: true, commId, status });
     }
 
     // Update the individual communication record

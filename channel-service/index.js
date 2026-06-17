@@ -4,6 +4,33 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Dead-letter log — captures callbacks that exhausted all retries
+const deadLetters = [];
+
+async function fireWithRetry(url, payload, headers, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return;
+      console.warn(`[channel] Callback attempt ${attempt} returned ${res.status}`);
+    } catch (err) {
+      console.warn(`[channel] Callback attempt ${attempt} failed: ${err.message}`);
+    }
+    if (attempt < retries) await new Promise(r => setTimeout(r, attempt * 1000));
+  }
+  // All retries exhausted — record in dead-letter log
+  deadLetters.push({ url, payload, failedAt: new Date().toISOString() });
+  console.error(`[channel] Webhook delivery failed after ${retries} attempts. Dead-lettered.`);
+}
+
+app.get('/dead-letters', (_req, res) => {
+  res.json({ count: deadLetters.length, items: deadLetters.slice(-50) });
+});
+
 app.post('/send', (req, res) => {
   const { communications, campaignId, callbackBaseUrl } = req.body;
   
@@ -29,20 +56,21 @@ app.post('/send', (req, res) => {
       }
       
       // Fire webhook callback back to AIRA CRM application telemetry engine
-      fetch(`${callbackBaseUrl || 'http://localhost:3000'}/api/receipts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          communicationId: comm.communicationId,
-          customerId: comm.customerId,
-          campaignId,
-          status,
-          channel: comm.channel,
-          openedAt,
-          clickedAt,
-          timestamp: new Date().toISOString()
-        })
-      }).catch(err => console.error("Webhook Delivery Failed:", err.message));
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(process.env.WEBHOOK_SECRET ? { 'x-webhook-secret': process.env.WEBHOOK_SECRET } : {}),
+      };
+      const payload = {
+        communicationId: comm.communicationId,
+        customerId: comm.customerId,
+        campaignId,
+        status,
+        channel: comm.channel,
+        openedAt,
+        clickedAt,
+        timestamp: new Date().toISOString(),
+      };
+      fireWithRetry(`${callbackBaseUrl || 'http://localhost:3000'}/api/receipts`, payload, headers);
     }, delay);
   });
 });

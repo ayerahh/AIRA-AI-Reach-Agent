@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCustomers, getOrders } from "@/lib/store";
+import { sanitizeName, sanitizeEmail, isValidEmail } from "@/lib/sanitize";
 import type { Customer, Order, OrderItem, OrderStatus, ProductCategory, CustomerTier, CustomerStatus, PreferredChannel } from "@/lib/types";
 
 // Gender-neutral Indian names
@@ -211,6 +212,13 @@ export async function POST(req: Request) {
         );
       }
 
+      if (customers.length > 500) {
+        return NextResponse.json(
+          { success: false, error: "Paste import is limited to 500 customers per request." },
+          { status: 400 }
+        );
+      }
+
       const addedCustomersList: Customer[] = [];
       const addedOrdersList: Order[] = [];
       let duplicatesSkipped = 0;
@@ -226,7 +234,14 @@ export async function POST(req: Request) {
           );
         }
 
-        const email = rawCust.email.toLowerCase();
+        const email = sanitizeEmail(rawCust.email);
+        if (!isValidEmail(email)) {
+          return NextResponse.json(
+            { success: false, error: `Invalid email address: ${rawCust.email}` },
+            { status: 400 }
+          );
+        }
+        rawCust.name = sanitizeName(String(rawCust.name));
         if (existingEmails.has(email)) {
           duplicatesSkipped++;
           continue;

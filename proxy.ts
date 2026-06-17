@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 10);
   const res = NextResponse.next();
 
